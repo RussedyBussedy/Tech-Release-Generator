@@ -15,7 +15,7 @@
         }
         .spinner {
             border: 2px solid #f3f3f3;
-            border-top: 2px solid #3498db;
+            border-top: 2px solid #3b82f6;
             border-radius: 50%;
             width: 16px;
             height: 16px;
@@ -35,6 +35,15 @@
             border-bottom-color: #3b82f6;
             color: #3b82f6;
             font-weight: 600;
+        }
+        /* Styles for the drag-and-drop area */
+        #drop-zone {
+            border: 2px dashed #cbd5e1;
+            transition: border-color 0.2s, background-color 0.2s;
+        }
+        #drop-zone.dragover {
+            border-color: #3b82f6;
+            background-color: #eff6ff;
         }
     </style>
 </head>
@@ -63,7 +72,7 @@
                     </div>
                     <div class="text-right">
                         <label for="ref-number-input" class="block text-sm font-medium text-gray-700 text-right">Reference Number</label>
-                        <input type="text" id="ref-number-input" class="w-48 mt-1 px-3 py-2 border border-gray-300 rounded-lg text-right font-bold text-blue-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                        <input type="text" id="ref-number-input" class="w-48 mt-1 px-3 py-2 border border-gray-300 rounded-lg text-right font-bold text-blue-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Loading...">
                     </div>
                 </div>
                 <div class="space-y-6">
@@ -89,19 +98,43 @@
                     <div>
                         <label for="overview" class="block text-sm font-medium text-gray-700 mb-1">Overview</label>
                         <textarea id="overview" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Provide a brief overview of the technical release."></textarea>
+                        <button onclick="refineText('overview')" class="mt-2 px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200 transition flex items-center gap-2">
+                            <span class="refine-text">Refine with AI</span> <span class="spinner hidden"></span>
+                        </button>
                     </div>
                     <div>
                         <label for="details" class="block text-sm font-medium text-gray-700 mb-1">Details</label>
                         <textarea id="details" rows="6" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Provide the specific details, features, or changes."></textarea>
+                        <button onclick="refineText('details')" class="mt-2 px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200 transition flex items-center gap-2">
+                            <span class="refine-text">Refine with AI</span> <span class="spinner hidden"></span>
+                        </button>
                     </div>
+                    <!-- Drag and Drop Image Upload -->
                     <div>
-                        <label for="images" class="block text-sm font-medium text-gray-700 mb-1">Images</label>
-                        <input type="file" id="images" multiple accept="image/*" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100">
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Images</label>
+                        <div id="drop-zone" class="flex justify-center items-center w-full p-8 rounded-lg cursor-pointer">
+                            <div class="text-center">
+                                <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                                </svg>
+                                <p class="mt-2 text-sm text-gray-600">
+                                    <span class="font-semibold">Click to upload</span> or drag and drop
+                                </p>
+                                <p class="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
+                            </div>
+                            <input type="file" id="images" multiple accept="image/*" class="hidden">
+                        </div>
                         <div id="image-preview" class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4"></div>
+                        <button id="generate-headings-button" onclick="generateImageHeadings()" class="hidden mt-4 px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 transition flex items-center gap-2">
+                            <span class="refine-text">Generate Image Headings with AI</span> <span class="spinner hidden"></span>
+                        </button>
                     </div>
                     <div>
                         <label for="impact" class="block text-sm font-medium text-gray-700 mb-1">Impact and Action Required</label>
                         <textarea id="impact" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Explain the impact on users and what actions are required from them."></textarea>
+                        <button onclick="refineText('impact')" class="mt-2 px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200 transition flex items-center gap-2">
+                            <span class="refine-text">Refine with AI</span> <span class="spinner hidden"></span>
+                        </button>
                     </div>
                 </div>
                 <div class="mt-8">
@@ -117,7 +150,7 @@
             <div class="bg-white p-8 rounded-xl shadow-lg">
                 <h1 class="text-3xl font-bold text-gray-900 mb-6">Release History</h1>
                 <div class="mb-6">
-                    <input type="text" id="search-input" onkeyup="searchReleases()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Search by title, reference no, or product...">
+                    <input type="text" id="search-input" onkeyup="searchReleases()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Search by title, ref no, product, or any keyword...">
                 </div>
                 <div id="history-results" class="space-y-4">
                     <p class="text-gray-500">Loading history...</p>
@@ -160,48 +193,10 @@
 
     <!-- Firebase SDKs -->
     <script type="module">
-        // --- IMPORTANT FIREBASE SETUP ---
-        // Before running, you MUST set up your Firebase security rules.
-        // The error "Missing or insufficient permissions" means your rules are incorrect.
-        //
-        // 1. Go to your Firebase Console -> Build -> Firestore Database -> Rules tab
-        // 2. Replace the default rules with these:
-        /*
-            rules_version = '2';
-            service cloud.firestore {
-              match /databases/{database}/documents {
-                // This rule allows anyone to read/list the documents in the 'releases'
-                // collection, and allows anyone to create new ones. The 'read' permission
-                // includes 'get' (for single documents) and 'list' (for collections).
-                match /releases/{releaseId} {
-                  allow read, write: if true;
-                }
-              }
-            }
-        */
-        //
-        // 3. Go to your Firebase Console -> Build -> Storage -> Rules tab
-        // 4. Replace the default rules with these:
-        /*
-            rules_version = '2';
-            service firebase.storage {
-              match /b/{bucket}/o {
-                // This allows PDF files to be uploaded and read from the 'releases' folder.
-                match /releases/{fileName} {
-                  allow read, write: if true;
-                }
-              }
-            }
-        */
-        // NOTE: These rules are for development and allow public access.
-        // For a production app, you should implement user authentication.
-        // --- END OF IMPORTANT SETUP ---
-
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, serverTimestamp, query, orderBy } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, serverTimestamp, query, orderBy, runTransaction, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
-        // Your web app's Firebase configuration
         const firebaseConfig = {
           apiKey: "AIzaSyCAnOF4XM_sYW1-s4iEM7i3JmiB7zFCSkw",
           authDomain: "tech-release-generator.firebaseapp.com",
@@ -212,67 +207,234 @@
           measurementId: "G-2D5WVYH83J"
         };
 
-        // Initialize Firebase
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const storage = getStorage(app);
 
-        // Make functions available globally
-        window.firebase = { db, storage, collection, addDoc, getDocs, ref, uploadBytes, getDownloadURL, doc, updateDoc, serverTimestamp, query, orderBy };
+        window.firebase = { db, storage, collection, addDoc, getDocs, ref, uploadBytes, getDownloadURL, doc, updateDoc, serverTimestamp, query, orderBy, runTransaction, getDoc, setDoc };
         
-        // Load initial data for history view
         (async () => {
             try {
                 await window.loadHistory();
+                await window.updateRefDisplay();
             } catch (e) {
-                // This error is almost always caused by incorrect Firebase security rules.
-                console.error("Initial history load failed. This is likely a Firebase rules issue.", e);
+                console.error("Initial app load failed. This is likely a Firebase rules issue.", e);
             }
         })();
     </script>
     
     <script>
         const imageFiles = []; 
-        let allReleases = []; // Cache for search
+        let allReleases = []; 
+        let suggestedRefNumber = ''; // Store the suggested number globally
 
-        function getNextRefNumber() {
-            const year = new Date().getFullYear();
-            let counter = localStorage.getItem(`releaseCounter_${year}`);
-            counter = counter ? parseInt(counter, 10) : 1;
-            return `TR-${year}-${counter.toString().padStart(3, '0')}`;
+        async function getNextRefNumber() {
+            const counterRef = window.firebase.doc(window.firebase.db, "_config", "releaseCounter");
+            try {
+                const counterSnap = await window.firebase.getDoc(counterRef);
+                let currentCounter = 1;
+                if (counterSnap.exists()) {
+                    currentCounter = counterSnap.data().value;
+                } else {
+                    // If counter doesn't exist, create it.
+                    await window.firebase.setDoc(counterRef, { value: 1 });
+                }
+                const year = new Date().getFullYear();
+                return `TR-${year}-${currentCounter.toString().padStart(3, '0')}`;
+            } catch (error) {
+                console.error("Could not fetch the next reference number:", error);
+                return "TR-ERROR-1";
+            }
         }
         
-        function updateRefDisplay() {
-             document.getElementById('ref-number-input').value = getNextRefNumber();
+        async function updateRefDisplay() {
+             suggestedRefNumber = await getNextRefNumber();
+             document.getElementById('ref-number-input').value = suggestedRefNumber;
         }
 
-        document.addEventListener('DOMContentLoaded', updateRefDisplay);
+        document.addEventListener('DOMContentLoaded', () => {
+            setupDragAndDrop();
+        });
 
-        document.getElementById('images').addEventListener('change', event => {
+        function setupDragAndDrop() {
+            const dropZone = document.getElementById('drop-zone');
+            const fileInput = document.getElementById('images');
+
+            dropZone.addEventListener('click', () => fileInput.click());
+            
+            dropZone.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                dropZone.classList.add('dragover');
+            });
+
+            dropZone.addEventListener('dragleave', () => {
+                dropZone.classList.remove('dragover');
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                e.preventDefault();
+                dropZone.classList.remove('dragover');
+                handleFiles(e.dataTransfer.files);
+            });
+
+            fileInput.addEventListener('change', (e) => {
+                handleFiles(e.target.files);
+            });
+        }
+
+        function handleFiles(files) {
             const preview = document.getElementById('image-preview');
-            preview.innerHTML = '';
-            imageFiles.length = 0; 
+            const headingsButton = document.getElementById('generate-headings-button');
 
-            for (const file of event.target.files) {
+            for (const file of files) {
                 if (!file.type.startsWith('image/')){ continue }
-                const fileData = { file: file, src: URL.createObjectURL(file) };
+                
+                const fileId = `file-${Date.now()}-${Math.random()}`;
+                const fileData = { id: fileId, file: file, src: URL.createObjectURL(file), heading: '' };
                 imageFiles.push(fileData);
+
+                const wrapper = document.createElement('div');
+                wrapper.id = fileId;
+                wrapper.className = 'relative group';
+
                 const img = document.createElement('img');
                 img.src = fileData.src;
-                img.className = 'w-full h-32 object-cover rounded-lg border'; 
-                preview.appendChild(img);
+                img.className = 'w-full h-32 object-cover rounded-lg border';
+
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.className = 'image-heading-input mt-2 w-full px-2 py-1 border border-gray-300 rounded-md text-sm';
+                input.placeholder = 'Image heading...';
+                input.oninput = () => {
+                    fileData.heading = input.value;
+                };
+
+                wrapper.appendChild(img);
+                wrapper.appendChild(input);
+                preview.appendChild(wrapper);
             }
+
+            if (imageFiles.length > 0) {
+                headingsButton.classList.remove('hidden');
+            }
+        }
+
+        async function refineText(elementId) {
+            const textarea = document.getElementById(elementId);
+            const button = textarea.nextElementSibling;
+            const spinner = button.querySelector('.spinner');
+            const buttonText = button.querySelector('.refine-text');
+
+            const originalText = textarea.value;
+            if (!originalText.trim()) {
+                alert("Please enter some text to refine.");
+                return;
+            }
+
+            spinner.classList.remove('hidden');
+            buttonText.textContent = 'Refining...';
+            button.disabled = true;
+
+            try {
+                const prompt = `Rewrite and improve the following text for a professional technical release document. Enhance its clarity, grammar, and formal tone. Respond with only the improved text. Original text: "${originalText}"`;
+                const refinedText = await callGemini(prompt);
+                textarea.value = refinedText.trim();
+            } catch (error) {
+                console.error('Error refining text:', error);
+                alert('An error occurred while refining the text.');
+            } finally {
+                spinner.classList.add('hidden');
+                buttonText.textContent = 'Refine with AI';
+                button.disabled = false;
+            }
+        }
+        
+        async function generateImageHeadings() {
+            const button = document.getElementById('generate-headings-button');
+            const spinner = button.querySelector('.spinner');
+            const buttonText = button.querySelector('.refine-text');
+
+            if (imageFiles.length === 0) {
+                alert("Please upload images first.");
+                return;
+            }
+            
+            spinner.classList.remove('hidden');
+            buttonText.textContent = 'Generating...';
+            button.disabled = true;
+
+            try {
+                const context = `Title: ${document.getElementById('title').value}\nOverview: ${document.getElementById('overview').value}`;
+                const promptParts = [{ text: `Based on the following context, generate a short, descriptive heading for each image.\n\nContext: ${context}\n\n` }];
+
+                for (const fileData of imageFiles) {
+                    const base64 = await toBase64(fileData.file);
+                    promptParts.push({ inlineData: { mimeType: fileData.file.type, data: base64.split(',')[1] } });
+                    promptParts.push({ text: "\n" });
+                }
+                
+                const schema = { type: "OBJECT", properties: { headings: { type: "ARRAY", items: { "type": "STRING" } } } };
+                const resultText = await callGemini(promptParts, schema);
+                const resultJson = JSON.parse(resultText);
+                
+                if (resultJson.headings && resultJson.headings.length === imageFiles.length) {
+                    resultJson.headings.forEach((heading, index) => {
+                        const fileData = imageFiles[index];
+                        fileData.heading = heading;
+                        const wrapper = document.getElementById(fileData.id);
+                        if (wrapper) {
+                            wrapper.querySelector('.image-heading-input').value = heading;
+                        }
+                    });
+                } else {
+                    throw new Error("AI did not return the expected number of headings.");
+                }
+
+            } catch (error) {
+                console.error('Error generating image headings:', error);
+                alert('An error occurred while generating image headings.');
+            } finally {
+                spinner.classList.add('hidden');
+                buttonText.textContent = 'Generate Image Headings with AI';
+                button.disabled = false;
+            }
+        }
+
+        const toBase64 = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
         });
+
+        async function callGemini(prompt, responseSchema = null) {
+            const apiKey = "AIzaSyCAnOF4XM_sYW1-s4iEM7i3JmiB7zFCSkw"; 
+            const payload = { contents: [{ role: "user", parts: Array.isArray(prompt) ? prompt : [{ text: prompt }] }] };
+
+            if (responseSchema) {
+                payload.generationConfig = { responseMimeType: "application/json", responseSchema: responseSchema };
+            }
+
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=${apiKey}`;
+
+            const response = await fetch(apiUrl, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
+            const result = await response.json();
+            if (result.candidates && result.candidates[0]?.content?.parts?.[0]?.text) {
+                return result.candidates[0].content.parts[0].text;
+            } else {
+                console.error("Invalid response structure:", result);
+                throw new Error("Received an invalid response from the AI service.");
+            }
+        }
 
         function generateDocument() {
             const refNumber = document.getElementById('ref-number-input').value;
-            const generatedRefNumber = getNextRefNumber();
-            if (refNumber === generatedRefNumber) {
-                const year = new Date().getFullYear();
-                let counter = localStorage.getItem(`releaseCounter_${year}`);
-                counter = counter ? parseInt(counter, 10) + 1 : 2;
-                localStorage.setItem(`releaseCounter_${year}`, counter);
-            }
             
             document.getElementById('output-ref').textContent = refNumber;
             document.getElementById('output-products').textContent = document.getElementById('productsAffected').value;
@@ -294,11 +456,17 @@
             if (imageFiles.length > 0) {
                 document.getElementById('output-images-section').classList.remove('hidden');
                 imageFiles.forEach(fileData => {
+                    const wrapper = document.createElement('div');
+                    const heading = document.createElement('h4');
+                    heading.className = 'text-md font-semibold text-gray-700 mb-2';
+                    heading.textContent = fileData.heading || '';
                     const img = document.createElement('img');
                     img.src = fileData.src;
                     img.className = 'w-full rounded-lg shadow-md border';
                     img.crossOrigin = "anonymous";
-                    imagesContainer.appendChild(img);
+                    wrapper.appendChild(heading);
+                    wrapper.appendChild(img);
+                    imagesContainer.appendChild(wrapper);
                 });
             } else {
                  document.getElementById('output-images-section').classList.add('hidden');
@@ -317,9 +485,23 @@
             button.disabled = true;
 
             try {
-                // 1. Prepare data object
+                const userRefNumber = document.getElementById('output-ref').textContent;
+
+                // Only increment the counter if the user is using the suggested number
+                if (userRefNumber === suggestedRefNumber) {
+                    const counterRef = window.firebase.doc(window.firebase.db, "_config", "releaseCounter");
+                    await window.firebase.runTransaction(window.firebase.db, async (transaction) => {
+                        const counterDoc = await transaction.get(counterRef);
+                        if (!counterDoc.exists()) {
+                            throw "Counter document does not exist!";
+                        }
+                        const newCounterValue = counterDoc.data().value + 1;
+                        transaction.update(counterRef, { value: newCounterValue });
+                    });
+                }
+                
                 const releaseData = {
-                    refNumber: document.getElementById('output-ref').textContent,
+                    refNumber: userRefNumber,
                     title: document.getElementById('output-title').textContent,
                     productsAffected: document.getElementById('output-products').textContent,
                     category: document.getElementById('output-category').textContent,
@@ -331,10 +513,8 @@
                     createdAt: window.firebase.serverTimestamp()
                 };
 
-                // 2. Save text data to Firestore
                 const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, "releases"), releaseData);
 
-                // 3. Generate PDF as a blob
                 const { jsPDF } = window.jspdf;
                 const content = document.getElementById('document-output');
                 const canvas = await html2canvas(content, { scale: 2, useCORS: true });
@@ -352,18 +532,16 @@
                 pdf.addImage(canvas.toDataURL('image/png'), 'PNG', xOffset, 0, finalImgWidth, finalImgHeight);
                 const pdfBlob = pdf.output('blob');
 
-                // 4. Upload PDF to Firebase Storage
                 const fileName = `${releaseData.refNumber}-${releaseData.title.replace(/[\s/]/g, '-')}.pdf`;
                 const storageRef = window.firebase.ref(window.firebase.storage, `releases/${fileName}`);
                 await window.firebase.uploadBytes(storageRef, pdfBlob);
 
-                // 5. Get PDF URL and update Firestore document
                 const downloadURL = await window.firebase.getDownloadURL(storageRef);
                 await window.firebase.updateDoc(docRef, { pdfUrl: downloadURL });
 
                 alert('Successfully saved to Firebase!');
-                await window.loadHistory(); // Refresh history
-                switchView('history-view'); // Switch to history view after saving
+                await window.loadHistory(); 
+                switchView('history-view'); 
 
             } catch (error) {
                 console.error("Error saving to Firebase: ", error);
@@ -423,7 +601,10 @@
             const filtered = allReleases.filter(r => 
                 (r.title && r.title.toLowerCase().includes(searchTerm)) ||
                 (r.refNumber && r.refNumber.toLowerCase().includes(searchTerm)) ||
-                (r.productsAffected && r.productsAffected.toLowerCase().includes(searchTerm))
+                (r.productsAffected && r.productsAffected.toLowerCase().includes(searchTerm)) ||
+                (r.overview && r.overview.toLowerCase().includes(searchTerm)) ||
+                (r.details && r.details.toLowerCase().includes(searchTerm)) ||
+                (r.impact && r.impact.toLowerCase().includes(searchTerm))
             );
             displayReleases(filtered);
         }
@@ -449,7 +630,7 @@
             }
         }
 
-        function startNewRelease() {
+        async function startNewRelease() {
             document.getElementById('productsAffected').value = '';
             document.getElementById('category').value = 'Motors';
             document.getElementById('title').value = '';
@@ -457,10 +638,13 @@
             document.getElementById('overview').value = '';
             document.getElementById('details').value = '';
             document.getElementById('impact').value = '';
-            document.getElementById('images').value = ''; 
+            
+            const fileInput = document.getElementById('images');
+            fileInput.value = ''; // Reset the file input
             document.getElementById('image-preview').innerHTML = '';
+            document.getElementById('generate-headings-button').classList.add('hidden');
             imageFiles.length = 0;
-            updateRefDisplay();
+            await updateRefDisplay();
         }
     </script>
 </body>
