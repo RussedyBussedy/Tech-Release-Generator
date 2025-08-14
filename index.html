@@ -410,7 +410,7 @@
         });
 
         async function callGemini(prompt, model, responseSchema = null) {
-            const apiKey = "AIzaSyCAnOF4XM_sYW1-s4iEM7i3JmiB7zFCSkw"; 
+            const apiKey = "AIzaSyD1ouEcm7GhtDx3Cqs3GTtZulcETvRF9YU"; 
             const payload = { contents: [{ role: "user", parts: Array.isArray(prompt) ? prompt : [{ text: prompt }] }] };
 
             if (responseSchema) {
