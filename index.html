@@ -337,7 +337,8 @@
 
             try {
                 const prompt = `Rewrite and improve the following text for a professional technical release document. Enhance its clarity, grammar, and formal tone. Respond with only the improved text. Original text: "${originalText}"`;
-                const refinedText = await callGemini(prompt);
+                // Use a fast and efficient text model for this task
+                const refinedText = await callGemini(prompt, 'gemini-2.5-flash-preview-05-20');
                 textarea.value = refinedText.trim();
             } catch (error) {
                 console.error('Error refining text:', error);
@@ -374,7 +375,8 @@
                 }
                 
                 const schema = { type: "OBJECT", properties: { headings: { type: "ARRAY", items: { "type": "STRING" } } } };
-                const resultText = await callGemini(promptParts, schema);
+                // Use the vision model for this task
+                const resultText = await callGemini(promptParts, 'gemini-pro-vision', schema);
                 const resultJson = JSON.parse(resultText);
                 
                 if (resultJson.headings && resultJson.headings.length === imageFiles.length) {
@@ -407,7 +409,7 @@
             reader.onerror = error => reject(error);
         });
 
-        async function callGemini(prompt, responseSchema = null) {
+        async function callGemini(prompt, model, responseSchema = null) {
             const apiKey = "AIzaSyCAnOF4XM_sYW1-s4iEM7i3JmiB7zFCSkw"; 
             const payload = { contents: [{ role: "user", parts: Array.isArray(prompt) ? prompt : [{ text: prompt }] }] };
 
@@ -415,7 +417,7 @@
                 payload.generationConfig = { responseMimeType: "application/json", responseSchema: responseSchema };
             }
 
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-pro-vision:generateContent?key=${apiKey}`;
+            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
 
             const response = await fetch(apiUrl, {
                 method: 'POST',
