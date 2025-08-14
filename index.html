@@ -338,7 +338,7 @@
             try {
                 const prompt = `Rewrite and improve the following text for a professional technical release document. Enhance its clarity, grammar, and formal tone. Respond with only the improved text. Original text: "${originalText}"`;
                 // Use a fast and efficient text model for this task
-                const refinedText = await callGemini(prompt, 'gemini-1.5-flash-preview-0514');
+                const refinedText = await callGemini(prompt, 'gemini-1.5-flash-latest');
                 textarea.value = refinedText.trim();
             } catch (error) {
                 console.error('Error refining text:', error);
