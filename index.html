@@ -337,12 +337,11 @@
 
             try {
                 const prompt = `Rewrite and improve the following text for a professional technical release document. Enhance its clarity, grammar, and formal tone. Respond with only the improved text. Original text: "${originalText}"`;
-                // Use a fast and efficient text model for this task
                 const refinedText = await callGemini(prompt, 'gemini-1.5-flash-latest');
                 textarea.value = refinedText.trim();
             } catch (error) {
                 console.error('Error refining text:', error);
-                alert('An error occurred while refining the text.');
+                alert(`An error occurred while refining the text:\n\n${error.message}`);
             } finally {
                 spinner.classList.add('hidden');
                 buttonText.textContent = 'Refine with AI';
@@ -375,7 +374,6 @@
                 }
                 
                 const schema = { type: "OBJECT", properties: { headings: { type: "ARRAY", items: { "type": "STRING" } } } };
-                // Use the vision model for this task
                 const resultText = await callGemini(promptParts, 'gemini-pro-vision', schema);
                 const resultJson = JSON.parse(resultText);
                 
@@ -394,7 +392,7 @@
 
             } catch (error) {
                 console.error('Error generating image headings:', error);
-                alert('An error occurred while generating image headings.');
+                alert(`An error occurred while generating image headings:\n\n${error.message}`);
             } finally {
                 spinner.classList.add('hidden');
                 buttonText.textContent = 'Generate Image Headings with AI';
@@ -425,13 +423,28 @@
                 body: JSON.stringify(payload)
             });
 
-            if (!response.ok) throw new Error(`API request failed with status ${response.status}`);
+            if (!response.ok) {
+                let errorMsg = `API request failed with status ${response.status}`;
+                try {
+                    const errorData = await response.json();
+                    if (errorData && errorData.error && errorData.error.message) {
+                        errorMsg = errorData.error.message;
+                    }
+                } catch (e) {
+                    console.error("Could not parse error JSON from API response.", e);
+                }
+                console.error("Full API Error:", errorMsg);
+                throw new Error(errorMsg);
+            }
             const result = await response.json();
             if (result.candidates && result.candidates[0]?.content?.parts?.[0]?.text) {
                 return result.candidates[0].content.parts[0].text;
             } else {
+                if (result.promptFeedback && result.promptFeedback.blockReason) {
+                     throw new Error(`Request blocked due to: ${result.promptFeedback.blockReason}`);
+                }
                 console.error("Invalid response structure:", result);
-                throw new Error("Received an invalid response from the AI service.");
+                throw new Error("Received an invalid or empty response from the AI service.");
             }
         }
 
