@@ -162,7 +162,8 @@
         <!-- DOCUMENT OUTPUT VIEW -->
         <div id="document-view" class="hidden">
              <div class="flex justify-end gap-2 mb-4">
-                <button onclick="switchView('form-view')" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition">Back to Editor</button>
+                <button onclick="startNewRelease(true)" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition">Start New Release</button>
+                <button onclick="switchView('form-view', false)" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition">Back to Editor</button>
                 <button id="pdf-download-button" onclick="downloadPDF()" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition flex items-center gap-2">
                     <span id="pdf-download-text">Download PDF</span>
                     <span id="pdf-download-spinner" class="spinner hidden"></span>
@@ -494,9 +495,42 @@
                  document.getElementById('output-images-section').classList.add('hidden');
             }
 
-            switchView('document-view');
+            switchView('document-view', false);
         }
         
+        async function getPdfBlob() {
+            const { jsPDF } = window.jspdf;
+            const content = document.getElementById('document-output');
+            const canvas = await html2canvas(content, { scale: 2, useCORS: true });
+            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            const pdfWidth = pdf.internal.pageSize.getWidth();
+            const pdfHeight = pdf.internal.pageSize.getHeight();
+            const canvasAspectRatio = canvas.width / canvas.height;
+            let finalImgWidth = pdfWidth;
+            let finalImgHeight = pdfWidth / canvasAspectRatio;
+            if (finalImgHeight > pdfHeight) {
+                finalImgHeight = pdfHeight;
+                finalImgWidth = pdfHeight * canvasAspectRatio;
+            }
+            const xOffset = (pdfWidth - finalImgWidth) / 2;
+            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', xOffset, 0, finalImgWidth, finalImgHeight);
+            return pdf.output('blob');
+        }
+
+        function getFormattedFileName() {
+            const today = new Date();
+            const year = today.getFullYear().toString().slice(-2);
+            const month = (today.getMonth() + 1).toString().padStart(2, '0');
+            const day = today.getDate().toString().padStart(2, '0');
+            const dateString = `${year}${month}${day}`;
+
+            const refNumber = document.getElementById('output-ref').textContent;
+            const titleText = document.getElementById('output-title').textContent || 'Untitled-Release';
+            const sanitizedTitle = titleText.replace(/[\s/]/g, '-');
+
+            return `${dateString}-${sanitizedTitle}-${refNumber}.pdf`;
+        }
+
         async function downloadPDF() {
             const button = document.getElementById('pdf-download-button');
             const buttonText = document.getElementById('pdf-download-text');
@@ -507,27 +541,12 @@
             button.disabled = true;
 
             try {
-                const { jsPDF } = window.jspdf;
-                const content = document.getElementById('document-output');
-                const canvas = await html2canvas(content, { scale: 2, useCORS: true });
-                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = pdf.internal.pageSize.getHeight();
-                const canvasAspectRatio = canvas.width / canvas.height;
-                let finalImgWidth = pdfWidth;
-                let finalImgHeight = pdfWidth / canvasAspectRatio;
-                if (finalImgHeight > pdfHeight) {
-                    finalImgHeight = pdfHeight;
-                    finalImgWidth = pdfHeight * canvasAspectRatio;
-                }
-                const xOffset = (pdfWidth - finalImgWidth) / 2;
-                pdf.addImage(canvas.toDataURL('image/png'), 'PNG', xOffset, 0, finalImgWidth, finalImgHeight);
-                
-                const refNumber = document.getElementById('output-ref').textContent;
-                const titleText = document.getElementById('output-title').textContent || 'Untitled-Release';
-                const fileName = `${refNumber}-${titleText.replace(/[\s/]/g, '-')}.pdf`;
-                pdf.save(fileName);
-
+                const pdfBlob = await getPdfBlob();
+                const fileName = getFormattedFileName();
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(pdfBlob);
+                link.download = fileName;
+                link.click();
             } catch (error) {
                 console.error("Error generating PDF:", error);
                 alert("Failed to generate PDF. Check console for details.");
@@ -574,28 +593,13 @@
                     createdAt: window.firebase.serverTimestamp()
                 };
 
-                const { jsPDF } = window.jspdf;
-                const content = document.getElementById('document-output');
-                const canvas = await html2canvas(content, { scale: 2, useCORS: true });
-                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-                const pdfWidth = pdf.internal.pageSize.getWidth();
-                const pdfHeight = pdf.internal.pageSize.getHeight();
-                const canvasAspectRatio = canvas.width / canvas.height;
-                let finalImgWidth = pdfWidth;
-                let finalImgHeight = pdfWidth / canvasAspectRatio;
-                if (finalImgHeight > pdfHeight) {
-                    finalImgHeight = pdfHeight;
-                    finalImgWidth = pdfHeight * canvasAspectRatio;
-                }
-                const xOffset = (pdfWidth - finalImgWidth) / 2;
-                pdf.addImage(canvas.toDataURL('image/png'), 'PNG', xOffset, 0, finalImgWidth, finalImgHeight);
-                const pdfBlob = pdf.output('blob');
-
-                const fileName = `${releaseData.refNumber}-${releaseData.title.replace(/[\s/]/g, '-')}.pdf`;
+                const pdfBlob = await getPdfBlob();
+                const fileName = getFormattedFileName();
                 const storageRef = window.firebase.ref(window.firebase.storage, `releases/${fileName}`);
                 await window.firebase.uploadBytes(storageRef, pdfBlob);
                 const downloadURL = await window.firebase.getDownloadURL(storageRef);
                 releaseData.pdfUrl = downloadURL;
+                releaseData.storagePath = storageRef.fullPath; // Store the path for deletion
 
                 if (editingId) {
                     const docRef = window.firebase.doc(window.firebase.db, "releases", editingId);
@@ -648,7 +652,7 @@
                     <div class="flex items-center gap-2">
                         <a href="${release.pdfUrl}" target="_blank" class="bg-green-100 text-green-800 font-semibold py-2 px-3 rounded-lg hover:bg-green-200 transition text-sm">View PDF</a>
                         <button onclick="editRelease('${release.id}')" class="bg-blue-100 text-blue-800 font-semibold py-2 px-3 rounded-lg hover:bg-blue-200 transition text-sm">Edit</button>
-                        <button onclick="deleteRelease('${release.id}', '${release.refNumber}', '${release.title}')" class="bg-red-100 text-red-800 font-semibold py-2 px-3 rounded-lg hover:bg-red-200 transition text-sm">Delete</button>
+                        <button onclick="deleteRelease('${release.id}', '${release.storagePath}')" class="bg-red-100 text-red-800 font-semibold py-2 px-3 rounded-lg hover:bg-red-200 transition text-sm">Delete</button>
                     </div>
                 </div>
             `).join('');
@@ -672,10 +676,10 @@
             document.getElementById('image-preview').innerHTML = '<p class="text-sm text-gray-500 col-span-4">Images cannot be edited. Please re-upload if you need to change them.</p>';
 
             document.getElementById('form-title').textContent = 'Editing Technical Release';
-            switchView('form-view');
+            switchView('form-view', false);
         }
 
-        window.deleteRelease = async function(id, refNumber, title) {
+        window.deleteRelease = async function(id, storagePath) {
             if (!confirm('Are you sure you want to permanently delete this technical release? This action cannot be undone.')) {
                 return;
             }
@@ -683,9 +687,10 @@
             try {
                 await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, "releases", id));
                 
-                const fileName = `${refNumber}-${title.replace(/[\s/]/g, '-')}.pdf`;
-                const storageRef = window.firebase.ref(window.firebase.storage, `releases/${fileName}`);
-                await window.firebase.deleteObject(storageRef);
+                if (storagePath) {
+                    const storageRef = window.firebase.ref(window.firebase.storage, storagePath);
+                    await window.firebase.deleteObject(storageRef);
+                }
                 
                 alert('Release deleted successfully.');
                 await loadHistory();
@@ -712,7 +717,7 @@
             displayReleases(filtered);
         }
 
-        function switchView(viewId) {
+        function switchView(viewId, reset = true) {
             ['form-view', 'history-view', 'document-view'].forEach(id => {
                 document.getElementById(id).classList.add('hidden');
             });
@@ -728,12 +733,12 @@
                 document.getElementById('history-tab-button').classList.add('active');
             }
             
-            if (viewId === 'form-view' && !document.getElementById('editing-id').value) {
+            if (viewId === 'form-view' && reset && !document.getElementById('editing-id').value) {
                 startNewRelease();
             }
         }
 
-        async function startNewRelease() {
+        async function startNewRelease(switchToForm = true) {
             document.getElementById('editing-id').value = '';
             document.getElementById('form-title').textContent = 'Technical Release Generator';
             document.getElementById('productsAffected').value = '';
@@ -750,6 +755,10 @@
             document.getElementById('generate-headings-button').classList.add('hidden');
             imageFiles.length = 0;
             await updateRefDisplay();
+            
+            if (switchToForm) {
+                switchView('form-view', false);
+            }
         }
     </script>
 </body>
