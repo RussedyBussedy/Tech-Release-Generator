@@ -503,19 +503,31 @@
             const content = document.getElementById('document-output');
             const canvas = await html2canvas(content, { scale: 2, useCORS: true });
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+            
+            const imgData = canvas.toDataURL('image/jpeg', 0.8); // Use JPEG with compression
+            
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
-            const canvasAspectRatio = canvas.width / canvas.height;
-            let finalImgWidth = pdfWidth;
-            let finalImgHeight = pdfWidth / canvasAspectRatio;
-            if (finalImgHeight > pdfHeight) {
-                finalImgHeight = pdfHeight;
-                finalImgWidth = pdfHeight * canvasAspectRatio;
+            
+            const imgProps = pdf.getImageProperties(imgData);
+            const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+
+            let heightLeft = imgHeight;
+            let position = 0;
+
+            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
+            heightLeft -= pdfHeight;
+
+            while (heightLeft > 0) {
+                position = -heightLeft;
+                pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
+                heightLeft -= pdfHeight;
             }
-            const xOffset = (pdfWidth - finalImgWidth) / 2;
-            pdf.addImage(canvas.toDataURL('image/png'), 'PNG', xOffset, 0, finalImgWidth, finalImgHeight);
+            
             return pdf.output('blob');
         }
+
 
         function getFormattedFileName() {
             const today = new Date();
@@ -547,6 +559,7 @@
                 link.href = URL.createObjectURL(pdfBlob);
                 link.download = fileName;
                 link.click();
+                URL.revokeObjectURL(link.href);
             } catch (error) {
                 console.error("Error generating PDF:", error);
                 alert("Failed to generate PDF. Check console for details.");
