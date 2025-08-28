@@ -504,26 +504,24 @@
             const canvas = await html2canvas(content, { scale: 2, useCORS: true });
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             
-            const imgData = canvas.toDataURL('image/jpeg', 0.8); // Use JPEG with compression
+            const imgData = canvas.toDataURL('image/jpeg', 0.8);
             
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
-            
-            const imgProps = pdf.getImageProperties(imgData);
-            const imgHeight = (imgProps.height * pdfWidth) / imgProps.width;
+            const canvasAspectRatio = canvas.width / canvas.height;
 
-            let heightLeft = imgHeight;
-            let position = 0;
+            let finalImgWidth = pdfWidth;
+            let finalImgHeight = pdfWidth / canvasAspectRatio;
 
-            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
-            heightLeft -= pdfHeight;
-
-            while (heightLeft > 0) {
-                position = -heightLeft;
-                pdf.addPage();
-                pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, imgHeight);
-                heightLeft -= pdfHeight;
+            if (finalImgHeight > pdfHeight) {
+                finalImgHeight = pdfHeight;
+                finalImgWidth = pdfHeight * canvasAspectRatio;
             }
+            
+            const xOffset = (pdfWidth - finalImgWidth) / 2;
+            const yOffset = (pdfHeight - finalImgHeight) / 2;
+
+            pdf.addImage(imgData, 'JPEG', xOffset, yOffset, finalImgWidth, finalImgHeight);
             
             return pdf.output('blob');
         }
