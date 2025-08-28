@@ -65,9 +65,10 @@
         <!-- FORM VIEW -->
         <div id="form-view">
             <div class="bg-white p-8 rounded-xl shadow-lg">
+                <input type="hidden" id="editing-id"> <!-- Hidden input to store the ID of the document being edited -->
                 <div class="flex justify-between items-center mb-8">
                     <div>
-                        <h1 class="text-3xl font-bold text-gray-900">Technical Release Generator</h1>
+                        <h1 id="form-title" class="text-3xl font-bold text-gray-900">Technical Release Generator</h1>
                         <p class="text-gray-600">Fill in the details below to create a new document.</p>
                     </div>
                     <div class="text-right">
@@ -139,7 +140,7 @@
                 </div>
                 <div class="mt-8">
                     <button id="generate-button" onclick="generateDocument()" class="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105">
-                        Preview & Save
+                        Preview Document
                     </button>
                 </div>
             </div>
@@ -162,6 +163,10 @@
         <div id="document-view" class="hidden">
              <div class="flex justify-end gap-2 mb-4">
                 <button onclick="switchView('form-view')" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition">Back to Editor</button>
+                <button id="pdf-download-button" onclick="downloadPDF()" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition flex items-center gap-2">
+                    <span id="pdf-download-text">Download PDF</span>
+                    <span id="pdf-download-spinner" class="spinner hidden"></span>
+                </button>
                 <button id="firebase-save-button" onclick="saveToFirebase()" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
                     <span id="firebase-save-text">Save to Firebase</span>
                     <span id="firebase-spinner" class="spinner hidden"></span>
@@ -194,8 +199,8 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, serverTimestamp, query, orderBy, runTransaction, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, serverTimestamp, query, orderBy, runTransaction, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
         const firebaseConfig = {
           apiKey: "AIzaSyCAnOF4XM_sYW1-s4iEM7i3JmiB7zFCSkw",
@@ -211,7 +216,7 @@
         const db = getFirestore(app);
         const storage = getStorage(app);
 
-        window.firebase = { db, storage, collection, addDoc, getDocs, ref, uploadBytes, getDownloadURL, doc, updateDoc, serverTimestamp, query, orderBy, runTransaction, getDoc, setDoc };
+        window.firebase = { db, storage, collection, addDoc, getDocs, ref, uploadBytes, getDownloadURL, doc, updateDoc, serverTimestamp, query, orderBy, runTransaction, getDoc, setDoc, deleteDoc, deleteObject };
         
         (async () => {
             try {
@@ -226,7 +231,7 @@
     <script>
         const imageFiles = []; 
         let allReleases = []; 
-        let suggestedRefNumber = ''; // Store the suggested number globally
+        let suggestedRefNumber = '';
 
         async function getNextRefNumber() {
             const counterRef = window.firebase.doc(window.firebase.db, "_config", "releaseCounter");
@@ -236,7 +241,6 @@
                 if (counterSnap.exists()) {
                     currentCounter = counterSnap.data().value;
                 } else {
-                    // If counter doesn't exist, create it.
                     await window.firebase.setDoc(counterRef, { value: 1 });
                 }
                 const year = new Date().getFullYear();
@@ -290,28 +294,32 @@
                 if (!file.type.startsWith('image/')){ continue }
                 
                 const fileId = `file-${Date.now()}-${Math.random()}`;
-                const fileData = { id: fileId, file: file, src: URL.createObjectURL(file), heading: '' };
-                imageFiles.push(fileData);
+                const fileData = { id: fileId, file: file, src: '', heading: '' }; // src will be base64
+                
+                toBase64(file).then(base64_src => {
+                    fileData.src = base64_src;
+                    imageFiles.push(fileData);
 
-                const wrapper = document.createElement('div');
-                wrapper.id = fileId;
-                wrapper.className = 'relative group';
+                    const wrapper = document.createElement('div');
+                    wrapper.id = fileId;
+                    wrapper.className = 'relative group';
 
-                const img = document.createElement('img');
-                img.src = fileData.src;
-                img.className = 'w-full h-32 object-cover rounded-lg border';
+                    const img = document.createElement('img');
+                    img.src = fileData.src;
+                    img.className = 'w-full h-32 object-cover rounded-lg border';
 
-                const input = document.createElement('input');
-                input.type = 'text';
-                input.className = 'image-heading-input mt-2 w-full px-2 py-1 border border-gray-300 rounded-md text-sm';
-                input.placeholder = 'Image heading...';
-                input.oninput = () => {
-                    fileData.heading = input.value;
-                };
+                    const input = document.createElement('input');
+                    input.type = 'text';
+                    input.className = 'image-heading-input mt-2 w-full px-2 py-1 border border-gray-300 rounded-md text-sm';
+                    input.placeholder = 'Image heading...';
+                    input.oninput = () => {
+                        fileData.heading = input.value;
+                    };
 
-                wrapper.appendChild(img);
-                wrapper.appendChild(input);
-                preview.appendChild(wrapper);
+                    wrapper.appendChild(img);
+                    wrapper.appendChild(input);
+                    preview.appendChild(wrapper);
+                });
             }
 
             if (imageFiles.length > 0) {
@@ -337,7 +345,7 @@
 
             try {
                 const prompt = `Rewrite and improve the following text for a professional technical release document. Enhance its clarity, grammar, and formal tone. Respond with only the improved text. Original text: "${originalText}"`;
-                const refinedText = await callGemini(prompt, 'gemini-2.5-flash-preview-05-20');
+                const refinedText = await callGemini(prompt, 'gemini-1.5-flash-latest');
                 textarea.value = refinedText.trim();
             } catch (error) {
                 console.error('Error refining text:', error);
@@ -368,13 +376,12 @@
                 const promptParts = [{ text: `Based on the following context, generate a short, descriptive heading for each image.\n\nContext: ${context}\n\n` }];
 
                 for (const fileData of imageFiles) {
-                    const base64 = await toBase64(fileData.file);
-                    promptParts.push({ inlineData: { mimeType: fileData.file.type, data: base64.split(',')[1] } });
+                    promptParts.push({ inlineData: { mimeType: fileData.file.type, data: fileData.src.split(',')[1] } });
                     promptParts.push({ text: "\n" });
                 }
                 
                 const schema = { type: "OBJECT", properties: { headings: { type: "ARRAY", items: { "type": "STRING" } } } };
-                const resultText = await callGemini(promptParts, 'gemini-2.5-flash-preview-05-20', schema);
+                const resultText = await callGemini(promptParts, 'gemini-1.5-flash-latest', schema);
                 const resultJson = JSON.parse(resultText);
                 
                 if (resultJson.headings && resultJson.headings.length === imageFiles.length) {
@@ -489,27 +496,66 @@
 
             switchView('document-view');
         }
+        
+        async function downloadPDF() {
+            const button = document.getElementById('pdf-download-button');
+            const buttonText = document.getElementById('pdf-download-text');
+            const spinner = document.getElementById('pdf-download-spinner');
+
+            buttonText.textContent = 'Generating...';
+            spinner.classList.remove('hidden');
+            button.disabled = true;
+
+            try {
+                const { jsPDF } = window.jspdf;
+                const content = document.getElementById('document-output');
+                const canvas = await html2canvas(content, { scale: 2, useCORS: true });
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                const canvasAspectRatio = canvas.width / canvas.height;
+                let finalImgWidth = pdfWidth;
+                let finalImgHeight = pdfWidth / canvasAspectRatio;
+                if (finalImgHeight > pdfHeight) {
+                    finalImgHeight = pdfHeight;
+                    finalImgWidth = pdfHeight * canvasAspectRatio;
+                }
+                const xOffset = (pdfWidth - finalImgWidth) / 2;
+                pdf.addImage(canvas.toDataURL('image/png'), 'PNG', xOffset, 0, finalImgWidth, finalImgHeight);
+                
+                const refNumber = document.getElementById('output-ref').textContent;
+                const titleText = document.getElementById('output-title').textContent || 'Untitled-Release';
+                const fileName = `${refNumber}-${titleText.replace(/[\s/]/g, '-')}.pdf`;
+                pdf.save(fileName);
+
+            } catch (error) {
+                console.error("Error generating PDF:", error);
+                alert("Failed to generate PDF. Check console for details.");
+            } finally {
+                buttonText.textContent = 'Download PDF';
+                spinner.classList.add('hidden');
+                button.disabled = false;
+            }
+        }
 
         async function saveToFirebase() {
             const button = document.getElementById('firebase-save-button');
             const buttonText = document.getElementById('firebase-save-text');
             const spinner = document.getElementById('firebase-spinner');
+            const editingId = document.getElementById('editing-id').value;
 
-            buttonText.textContent = 'Saving...';
+            buttonText.textContent = editingId ? 'Updating...' : 'Saving...';
             spinner.classList.remove('hidden');
             button.disabled = true;
 
             try {
                 const userRefNumber = document.getElementById('output-ref').textContent;
 
-                // Only increment the counter if the user is using the suggested number
-                if (userRefNumber === suggestedRefNumber) {
+                if (!editingId && userRefNumber === suggestedRefNumber) {
                     const counterRef = window.firebase.doc(window.firebase.db, "_config", "releaseCounter");
                     await window.firebase.runTransaction(window.firebase.db, async (transaction) => {
                         const counterDoc = await transaction.get(counterRef);
-                        if (!counterDoc.exists()) {
-                            throw "Counter document does not exist!";
-                        }
+                        if (!counterDoc.exists()) throw "Counter document does not exist!";
                         const newCounterValue = counterDoc.data().value + 1;
                         transaction.update(counterRef, { value: newCounterValue });
                     });
@@ -527,8 +573,6 @@
                     impact: document.getElementById('output-impact').textContent,
                     createdAt: window.firebase.serverTimestamp()
                 };
-
-                const docRef = await window.firebase.addDoc(window.firebase.collection(window.firebase.db, "releases"), releaseData);
 
                 const { jsPDF } = window.jspdf;
                 const content = document.getElementById('document-output');
@@ -550,11 +594,18 @@
                 const fileName = `${releaseData.refNumber}-${releaseData.title.replace(/[\s/]/g, '-')}.pdf`;
                 const storageRef = window.firebase.ref(window.firebase.storage, `releases/${fileName}`);
                 await window.firebase.uploadBytes(storageRef, pdfBlob);
-
                 const downloadURL = await window.firebase.getDownloadURL(storageRef);
-                await window.firebase.updateDoc(docRef, { pdfUrl: downloadURL });
+                releaseData.pdfUrl = downloadURL;
 
-                alert('Successfully saved to Firebase!');
+                if (editingId) {
+                    const docRef = window.firebase.doc(window.firebase.db, "releases", editingId);
+                    await window.firebase.updateDoc(docRef, releaseData);
+                    alert('Successfully updated release!');
+                } else {
+                    await window.firebase.addDoc(window.firebase.collection(window.firebase.db, "releases"), releaseData);
+                    alert('Successfully saved to Firebase!');
+                }
+
                 await window.loadHistory(); 
                 switchView('history-view'); 
 
@@ -578,13 +629,7 @@
             } catch (error) {
                 console.error("Error loading history: ", error);
                 const historyResults = document.getElementById('history-results');
-                historyResults.innerHTML = `
-                    <div class="text-red-100 border-l-4 border-red-500 bg-red-50 p-4" role="alert">
-                        <p class="font-bold text-red-800">Error Loading History</p>
-                        <p class="text-red-700">Could not fetch data from the database due to a permissions error.</p>
-                        <p class="mt-2 text-sm text-red-700">Please check the browser console for details and ensure your <strong>Firebase Security Rules</strong> are set up correctly as described in the comments at the top of the script tag in the HTML file.</p>
-                    </div>
-                `;
+                historyResults.innerHTML = `<div class="text-red-100 border-l-4 border-red-500 bg-red-50 p-4" role="alert"><p class="font-bold text-red-800">Error Loading History</p><p class="text-red-700">Could not fetch data. Please ensure your Firebase Security Rules are set up correctly.</p></div>`;
             }
         }
 
@@ -600,11 +645,54 @@
                         <p class="font-bold text-lg text-gray-800">${release.title}</p>
                         <p class="text-sm text-gray-600">${release.refNumber} | Products: ${release.productsAffected}</p>
                     </div>
-                    <a href="${release.pdfUrl}" target="_blank" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition">
-                        View PDF
-                    </a>
+                    <div class="flex items-center gap-2">
+                        <a href="${release.pdfUrl}" target="_blank" class="bg-green-100 text-green-800 font-semibold py-2 px-3 rounded-lg hover:bg-green-200 transition text-sm">View PDF</a>
+                        <button onclick="editRelease('${release.id}')" class="bg-blue-100 text-blue-800 font-semibold py-2 px-3 rounded-lg hover:bg-blue-200 transition text-sm">Edit</button>
+                        <button onclick="deleteRelease('${release.id}', '${release.refNumber}', '${release.title}')" class="bg-red-100 text-red-800 font-semibold py-2 px-3 rounded-lg hover:bg-red-200 transition text-sm">Delete</button>
+                    </div>
                 </div>
             `).join('');
+        }
+        
+        window.editRelease = function(id) {
+            const release = allReleases.find(r => r.id === id);
+            if (!release) return;
+
+            document.getElementById('editing-id').value = id;
+            document.getElementById('ref-number-input').value = release.refNumber || '';
+            document.getElementById('productsAffected').value = release.productsAffected || '';
+            document.getElementById('category').value = release.category || 'Motors';
+            document.getElementById('title').value = release.title || '';
+            document.getElementById('effectiveDate').value = release.effectiveDate || '';
+            document.getElementById('overview').value = release.overview || '';
+            document.getElementById('details').value = release.details || '';
+            document.getElementById('impact').value = release.impact || '';
+            
+            imageFiles.length = 0;
+            document.getElementById('image-preview').innerHTML = '<p class="text-sm text-gray-500 col-span-4">Images cannot be edited. Please re-upload if you need to change them.</p>';
+
+            document.getElementById('form-title').textContent = 'Editing Technical Release';
+            switchView('form-view');
+        }
+
+        window.deleteRelease = async function(id, refNumber, title) {
+            if (!confirm('Are you sure you want to permanently delete this technical release? This action cannot be undone.')) {
+                return;
+            }
+
+            try {
+                await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, "releases", id));
+                
+                const fileName = `${refNumber}-${title.replace(/[\s/]/g, '-')}.pdf`;
+                const storageRef = window.firebase.ref(window.firebase.storage, `releases/${fileName}`);
+                await window.firebase.deleteObject(storageRef);
+                
+                alert('Release deleted successfully.');
+                await loadHistory();
+            } catch (error) {
+                console.error("Error deleting release: ", error);
+                alert(`Failed to delete release: ${error.message}`);
+            }
         }
 
         window.searchReleases = function() {
@@ -640,12 +728,14 @@
                 document.getElementById('history-tab-button').classList.add('active');
             }
             
-            if (viewId === 'form-view') {
+            if (viewId === 'form-view' && !document.getElementById('editing-id').value) {
                 startNewRelease();
             }
         }
 
         async function startNewRelease() {
+            document.getElementById('editing-id').value = '';
+            document.getElementById('form-title').textContent = 'Technical Release Generator';
             document.getElementById('productsAffected').value = '';
             document.getElementById('category').value = 'Motors';
             document.getElementById('title').value = '';
@@ -655,7 +745,7 @@
             document.getElementById('impact').value = '';
             
             const fileInput = document.getElementById('images');
-            fileInput.value = ''; // Reset the file input
+            fileInput.value = '';
             document.getElementById('image-preview').innerHTML = '';
             document.getElementById('generate-headings-button').classList.add('hidden');
             imageFiles.length = 0;
