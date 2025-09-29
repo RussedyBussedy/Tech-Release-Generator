@@ -53,7 +53,7 @@
         <!-- TABS for switching views -->
         <div class="mb-6 border-b border-gray-200">
             <nav class="flex -mb-px space-x-6">
-                <button id="generator-tab-button" onclick="switchView('form-view')" class="tab-button py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors duration-200 ease-in-out active">
+                <button id="generator-tab-button" onclick="handleGeneratorTabClick()" class="tab-button py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors duration-200 ease-in-out active">
                     Generator
                 </button>
                 <button id="history-tab-button" onclick="switchView('history-view')" class="tab-button py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors duration-200 ease-in-out">
@@ -162,8 +162,8 @@
         <!-- DOCUMENT OUTPUT VIEW -->
         <div id="document-view" class="hidden">
              <div class="flex justify-end gap-2 mb-4">
-                <button onclick="startNewRelease(true)" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition">Start New Release</button>
-                <button onclick="switchView('form-view', false)" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition">Back to Editor</button>
+                <button onclick="startNewRelease()" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition">Start New Release</button>
+                <button onclick="switchView('form-view')" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition">Back to Editor</button>
                 <button id="pdf-download-button" onclick="downloadPDF()" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition flex items-center gap-2">
                     <span id="pdf-download-text">Download PDF</span>
                     <span id="pdf-download-spinner" class="spinner hidden"></span>
@@ -219,17 +219,20 @@
 
         window.firebase = { db, storage, collection, addDoc, getDocs, ref, uploadBytes, getDownloadURL, doc, updateDoc, serverTimestamp, query, orderBy, runTransaction, getDoc, setDoc, deleteDoc, deleteObject };
         
-        (async () => {
-            try {
+        // This makes the functions available globally after the module has loaded
+        window.dispatchEvent(new CustomEvent('firebaseReady'));
+    </script>
+    
+    <script>
+        document.addEventListener('firebaseReady', async () => {
+             try {
                 await window.loadHistory();
                 await window.updateRefDisplay();
             } catch (e) {
                 console.error("Initial app load failed. This is likely a Firebase rules issue.", e);
             }
-        })();
-    </script>
-    
-    <script>
+        });
+
         const imageFiles = []; 
         let allReleases = []; 
         let suggestedRefNumber = '';
@@ -242,6 +245,7 @@
                 if (counterSnap.exists()) {
                     currentCounter = counterSnap.data().value;
                 } else {
+                    // Initialize the counter if it doesn't exist
                     await window.firebase.setDoc(counterRef, { value: 1 });
                 }
                 const year = new Date().getFullYear();
@@ -252,7 +256,7 @@
             }
         }
         
-        async function updateRefDisplay() {
+        window.updateRefDisplay = async function() {
              suggestedRefNumber = await getNextRefNumber();
              document.getElementById('ref-number-input').value = suggestedRefNumber;
         }
@@ -346,7 +350,7 @@
 
             try {
                 const prompt = `Rewrite and improve the following text for a professional technical release document. Enhance its clarity, grammar, and formal tone. Respond with only the improved text. Original text: "${originalText}"`;
-                const refinedText = await callGemini(prompt, 'gemini-1.5-flash-latest');
+                const refinedText = await callGemini(prompt, 'gemini-2.5-flash-preview-05-20');
                 textarea.value = refinedText.trim();
             } catch (error) {
                 console.error('Error refining text:', error);
@@ -382,7 +386,7 @@
                 }
                 
                 const schema = { type: "OBJECT", properties: { headings: { type: "ARRAY", items: { "type": "STRING" } } } };
-                const resultText = await callGemini(promptParts, 'gemini-1.5-flash-latest', schema);
+                const resultText = await callGemini(promptParts, 'gemini-2.5-flash-preview-05-20', schema);
                 const resultJson = JSON.parse(resultText);
                 
                 if (resultJson.headings && resultJson.headings.length === imageFiles.length) {
@@ -728,7 +732,7 @@
             displayReleases(filtered);
         }
 
-        function switchView(viewId, reset = true) {
+        async function switchView(viewId, reset = true) {
             ['form-view', 'history-view', 'document-view'].forEach(id => {
                 document.getElementById(id).classList.add('hidden');
             });
@@ -744,8 +748,8 @@
                 document.getElementById('history-tab-button').classList.add('active');
             }
             
-            if (viewId === 'form-view' && reset && !document.getElementById('editing-id').value) {
-                startNewRelease();
+            if (viewId === 'form-view' && reset) {
+               await startNewRelease(false);
             }
         }
 
@@ -771,6 +775,15 @@
                 switchView('form-view', false);
             }
         }
+
+        async function handleGeneratorTabClick() {
+            if (!document.getElementById('editing-id').value) {
+                await startNewRelease(true);
+            } else {
+                switchView('form-view', false);
+            }
+        }
     </script>
 </body>
 </html>
+
