@@ -241,9 +241,15 @@
             renderSectionsForm();
         }
 
+        // Ensure the UI renders immediately, regardless of Firebase connection speeds
+        document.addEventListener('DOMContentLoaded', () => {
+            if (documentSections.length === 0) {
+                initDefaultSections();
+            }
+        });
+
         document.addEventListener('firebaseReady', async () => {
              try {
-                initDefaultSections();
                 await window.loadHistory();
                 await window.updateRefDisplay();
             } catch (e) {
@@ -546,7 +552,7 @@
                     const gridHtml = section.images.map(img => `
                         <div>
                             <h4 class="text-sm font-semibold text-gray-700 mb-1 break-words">${img.heading || ''}</h4>
-                            <img src="${img.src}" class="w-full rounded-lg shadow-sm border crossOrigin="anonymous">
+                            <img src="${img.src}" class="w-full rounded-lg shadow-sm border" crossorigin="anonymous">
                         </div>
                     `).join('');
                     secDiv.innerHTML = `${titleHtml}<div class="mt-4 grid grid-cols-2 gap-4">${gridHtml}</div>`;
@@ -677,13 +683,23 @@
         }
         
         window.loadHistory = async function() {
+            const container = document.getElementById('history-results');
             try {
                 const releasesRef = window.firebase.collection(window.firebase.db, "releases");
                 const q = window.firebase.query(releasesRef, window.firebase.orderBy("createdAt", "desc"));
                 const querySnapshot = await window.firebase.getDocs(q);
                 allReleases = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 displayReleases(allReleases);
-            } catch (error) { console.error("History Error", error); }
+            } catch (error) { 
+                console.error("History Error", error); 
+                if (container) {
+                    container.innerHTML = `<div class="bg-red-50 text-red-700 p-4 rounded-lg border border-red-200">
+                        <p class="font-bold">Could not load history.</p>
+                        <p class="text-sm mt-1 text-red-600">Error: ${error.message}</p>
+                        <p class="text-sm mt-3 font-semibold">Please ensure your <strong>Firestore Database Rules</strong> are enabled and set to allow read/write access.</p>
+                    </div>`;
+                }
+            }
         }
 
         function displayReleases(releases) {
