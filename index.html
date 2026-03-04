@@ -36,7 +36,6 @@
             color: #3b82f6;
             font-weight: 600;
         }
-        /* Styles for the drag-and-drop area */
         #drop-zone {
             border: 2px dashed #cbd5e1;
             transition: border-color 0.2s, background-color 0.2s;
@@ -50,7 +49,6 @@
 <body class="bg-gray-100 text-gray-800">
 
     <div id="app-container" class="max-w-5xl mx-auto p-4 md:p-8">
-        <!-- TABS for switching views -->
         <div class="mb-6 border-b border-gray-200">
             <nav class="flex -mb-px space-x-6">
                 <button id="generator-tab-button" onclick="handleGeneratorTabClick()" class="tab-button py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors duration-200 ease-in-out active">
@@ -65,7 +63,7 @@
         <!-- FORM VIEW -->
         <div id="form-view">
             <div class="bg-white p-8 rounded-xl shadow-lg">
-                <input type="hidden" id="editing-id"> <!-- Hidden input to store the ID of the document being edited -->
+                <input type="hidden" id="editing-id">
                 <div class="flex justify-between items-center mb-8">
                     <div>
                         <h1 id="form-title" class="text-3xl font-bold text-gray-900">Technical Release Generator</h1>
@@ -77,7 +75,6 @@
                     </div>
                 </div>
                 <div class="space-y-6">
-                    <!-- Form fields -->
                     <div>
                         <label for="productsAffected" class="block text-sm font-medium text-gray-700 mb-1">Products Affected</label>
                         <input type="text" id="productsAffected" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g., Alpha Motors, Sonesse 30 WireFree">
@@ -110,7 +107,6 @@
                             <span class="refine-text">Refine with AI</span> <span class="spinner hidden"></span>
                         </button>
                     </div>
-                    <!-- Drag and Drop Image Upload -->
                     <div>
                         <label class="block text-sm font-medium text-gray-700 mb-1">Images</label>
                         <div id="drop-zone" class="flex justify-center items-center w-full p-8 rounded-lg cursor-pointer">
@@ -118,9 +114,7 @@
                                 <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
                                     <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
                                 </svg>
-                                <p class="mt-2 text-sm text-gray-600">
-                                    <span class="font-semibold">Click to upload</span> or drag and drop
-                                </p>
+                                <p class="mt-2 text-sm text-gray-600"><span class="font-semibold">Click to upload</span> or drag and drop</p>
                                 <p class="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
                             </div>
                             <input type="file" id="images" multiple accept="image/*" class="hidden">
@@ -190,7 +184,7 @@
                         <div id="output-overview-section"><h3 class="text-xl font-bold mb-3 text-gray-800 border-b-2 border-blue-200 pb-2">Overview</h3><p id="output-overview" class="text-gray-700 leading-relaxed whitespace-pre-wrap break-words"></p></div>
                         <div id="output-details-section"><h3 class="text-xl font-bold mb-3 text-gray-800 border-b-2 border-blue-200 pb-2">Details</h3><p id="output-details" class="text-gray-700 leading-relaxed whitespace-pre-wrap break-words"></p></div>
                         <div id="output-images-section" class="hidden"><h3 class="text-xl font-bold mb-3 text-gray-800 border-b-2 border-blue-200 pb-2">Images</h3><div id="output-images" class="mt-4 grid grid-cols-2 gap-4"></div></div>
-                        <div id="output-impact-section"><div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg"><div class="flex"><div class="flex-shrink-0"><svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.21 3.03-1.742 3.03H4.42c-1.532 0-2.492-1.696-1.742-3.03l5.58-9.92zM10 13a1 1 0 110-2 1 1 0 010 2zm-1-8a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd" /></svg></div><div class="ml-3"><h3 class="text-lg font-bold text-yellow-800">Impact and Action Required</h3><div class="mt-2 text-sm text-yellow-700"><p id="output-impact" class="whitespace-pre-wrap"></p></div></div></div></div></div>
+                        <div id="output-impact-section"><div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg"><div class="flex"><div class="flex-shrink-0"><svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.21 3.03-1.742 3.03H4.42c-1.532 0-2.492-1.696-1.742-3.03l5.58-9.92zM10 13a1 1 0 110-2 1 1 0 010 2zm-1-8a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd" /></svg></div><div class="ml-3"><h3 class="text-lg font-bold text-yellow-800">Impact and Action Required</h3><div class="mt-2 text-sm text-yellow-700"><p id="output-impact" class="whitespace-pre-wrap"></p></div></div></div></div></div>
                     </main>
                 </div>
             </div>
@@ -204,7 +198,7 @@
         import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
         const firebaseConfig = {
-          apiKey: "AIzaSyCAnOF4XM_sYW1-s4iEM7i3JmiB7zFCSkw",
+          apiKey: "AIzaSyCAnOF4XM_sYW1-s4iEM7i3JmiB7zFCSkw", // Original Firebase Key
           authDomain: "tech-release-generator.firebaseapp.com",
           projectId: "tech-release-generator",
           storageBucket: "tech-release-generator.appspot.com",
@@ -218,8 +212,6 @@
         const storage = getStorage(app);
 
         window.firebase = { db, storage, collection, addDoc, getDocs, ref, uploadBytes, getDownloadURL, doc, updateDoc, serverTimestamp, query, orderBy, runTransaction, getDoc, setDoc, deleteDoc, deleteObject };
-        
-        // This makes the functions available globally after the module has loaded
         window.dispatchEvent(new CustomEvent('firebaseReady'));
     </script>
     
@@ -229,7 +221,7 @@
                 await window.loadHistory();
                 await window.updateRefDisplay();
             } catch (e) {
-                console.error("Initial app load failed. This is likely a Firebase rules issue.", e);
+                console.error("Initial app load failed.", e);
             }
         });
 
@@ -245,7 +237,6 @@
                 if (counterSnap.exists()) {
                     currentCounter = counterSnap.data().value;
                 } else {
-                    // Initialize the counter if it doesn't exist
                     await window.firebase.setDoc(counterRef, { value: 1 });
                 }
                 const year = new Date().getFullYear();
@@ -268,68 +259,40 @@
         function setupDragAndDrop() {
             const dropZone = document.getElementById('drop-zone');
             const fileInput = document.getElementById('images');
-
             dropZone.addEventListener('click', () => fileInput.click());
-            
-            dropZone.addEventListener('dragover', (e) => {
-                e.preventDefault();
-                dropZone.classList.add('dragover');
-            });
-
-            dropZone.addEventListener('dragleave', () => {
-                dropZone.classList.remove('dragover');
-            });
-
-            dropZone.addEventListener('drop', (e) => {
-                e.preventDefault();
-                dropZone.classList.remove('dragover');
-                handleFiles(e.dataTransfer.files);
-            });
-
-            fileInput.addEventListener('change', (e) => {
-                handleFiles(e.target.files);
-            });
+            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
+            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
+            dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
+            fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
         }
 
         function handleFiles(files) {
             const preview = document.getElementById('image-preview');
             const headingsButton = document.getElementById('generate-headings-button');
-
             for (const file of files) {
                 if (!file.type.startsWith('image/')){ continue }
-                
                 const fileId = `file-${Date.now()}-${Math.random()}`;
-                const fileData = { id: fileId, file: file, src: '', heading: '' }; // src will be base64
-                
+                const fileData = { id: fileId, file: file, src: '', heading: '' }; 
                 toBase64(file).then(base64_src => {
                     fileData.src = base64_src;
                     imageFiles.push(fileData);
-
                     const wrapper = document.createElement('div');
                     wrapper.id = fileId;
                     wrapper.className = 'relative group';
-
                     const img = document.createElement('img');
                     img.src = fileData.src;
                     img.className = 'w-full h-32 object-cover rounded-lg border';
-
                     const input = document.createElement('input');
                     input.type = 'text';
                     input.className = 'image-heading-input mt-2 w-full px-2 py-1 border border-gray-300 rounded-md text-sm';
                     input.placeholder = 'Image heading...';
-                    input.oninput = () => {
-                        fileData.heading = input.value;
-                    };
-
+                    input.oninput = () => fileData.heading = input.value;
                     wrapper.appendChild(img);
                     wrapper.appendChild(input);
                     preview.appendChild(wrapper);
                 });
             }
-
-            if (imageFiles.length > 0) {
-                headingsButton.classList.remove('hidden');
-            }
+            if (files.length > 0) headingsButton.classList.remove('hidden');
         }
 
         async function refineText(elementId) {
@@ -337,24 +300,17 @@
             const button = textarea.nextElementSibling;
             const spinner = button.querySelector('.spinner');
             const buttonText = button.querySelector('.refine-text');
-
             const originalText = textarea.value;
-            if (!originalText.trim()) {
-                alert("Please enter some text to refine.");
-                return;
-            }
-
+            if (!originalText.trim()) { alert("Please enter some text to refine."); return; }
             spinner.classList.remove('hidden');
             buttonText.textContent = 'Refining...';
             button.disabled = true;
-
             try {
                 const prompt = `Rewrite and improve the following text for a professional technical release document. Enhance its clarity, grammar, and formal tone. Respond with only the improved text. Original text: "${originalText}"`;
-                const refinedText = await callGemini(prompt, 'gemini-2.5-flash-preview-05-20');
+                const refinedText = await callGemini(prompt, 'gemini-2.0-flash');
                 textarea.value = refinedText.trim();
             } catch (error) {
-                console.error('Error refining text:', error);
-                alert(`An error occurred while refining the text:\n\n${error.message}`);
+                alert(`Error refining text: ${error.message}`);
             } finally {
                 spinner.classList.add('hidden');
                 buttonText.textContent = 'Refine with AI';
@@ -366,45 +322,30 @@
             const button = document.getElementById('generate-headings-button');
             const spinner = button.querySelector('.spinner');
             const buttonText = button.querySelector('.refine-text');
-
-            if (imageFiles.length === 0) {
-                alert("Please upload images first.");
-                return;
-            }
-            
+            if (imageFiles.length === 0) { alert("Please upload images first."); return; }
             spinner.classList.remove('hidden');
             buttonText.textContent = 'Generating...';
             button.disabled = true;
-
             try {
                 const context = `Title: ${document.getElementById('title').value}\nOverview: ${document.getElementById('overview').value}`;
                 const promptParts = [{ text: `Based on the following context, generate a short, descriptive heading for each image.\n\nContext: ${context}\n\n` }];
-
                 for (const fileData of imageFiles) {
                     promptParts.push({ inlineData: { mimeType: fileData.file.type, data: fileData.src.split(',')[1] } });
                     promptParts.push({ text: "\n" });
                 }
-                
                 const schema = { type: "OBJECT", properties: { headings: { type: "ARRAY", items: { "type": "STRING" } } } };
-                const resultText = await callGemini(promptParts, 'gemini-2.5-flash-preview-05-20', schema);
+                const resultText = await callGemini(promptParts, 'gemini-2.0-flash', schema);
                 const resultJson = JSON.parse(resultText);
-                
                 if (resultJson.headings && resultJson.headings.length === imageFiles.length) {
                     resultJson.headings.forEach((heading, index) => {
                         const fileData = imageFiles[index];
                         fileData.heading = heading;
                         const wrapper = document.getElementById(fileData.id);
-                        if (wrapper) {
-                            wrapper.querySelector('.image-heading-input').value = heading;
-                        }
+                        if (wrapper) wrapper.querySelector('.image-heading-input').value = heading;
                     });
-                } else {
-                    throw new Error("AI did not return the expected number of headings.");
-                }
-
+                } else { throw new Error("Incorrect number of headings received."); }
             } catch (error) {
-                console.error('Error generating image headings:', error);
-                alert(`An error occurred while generating image headings:\n\n${error.message}`);
+                alert(`Error generating image headings: ${error.message}`);
             } finally {
                 spinner.classList.add('hidden');
                 buttonText.textContent = 'Generate Image Headings with AI';
@@ -420,64 +361,34 @@
         });
 
         async function callGemini(prompt, model, responseSchema = null) {
-            const apiKey = "AIzaSyD1ouEcm7GhtDx3Cqs3GTtZulcETvRF9YU"; 
+            const apiKey = "AIzaSyC-yMxXO1HXwrRsN4Xz71363ul5HHtgxXA"; // Your Gemini AI Key
             const payload = { contents: [{ role: "user", parts: Array.isArray(prompt) ? prompt : [{ text: prompt }] }] };
-
-            if (responseSchema) {
-                payload.generationConfig = { responseMimeType: "application/json", responseSchema: responseSchema };
-            }
-
+            if (responseSchema) payload.generationConfig = { responseMimeType: "application/json", responseSchema: responseSchema };
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-
-            const response = await fetch(apiUrl, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(payload)
-            });
-
+            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
             if (!response.ok) {
-                let errorMsg = `API request failed with status ${response.status}`;
-                try {
-                    const errorData = await response.json();
-                    if (errorData && errorData.error && errorData.error.message) {
-                        errorMsg = errorData.error.message;
-                    }
-                } catch (e) {
-                    console.error("Could not parse error JSON from API response.", e);
-                }
-                console.error("Full API Error:", errorMsg);
-                throw new Error(errorMsg);
+                let msg = `Request failed: ${response.status}`;
+                try { const data = await response.json(); if (data.error) msg = data.error.message; } catch (e) {}
+                throw new Error(msg);
             }
             const result = await response.json();
-            if (result.candidates && result.candidates[0]?.content?.parts?.[0]?.text) {
-                return result.candidates[0].content.parts[0].text;
-            } else {
-                if (result.promptFeedback && result.promptFeedback.blockReason) {
-                     throw new Error(`Request blocked due to: ${result.promptFeedback.blockReason}`);
-                }
-                console.error("Invalid response structure:", result);
-                throw new Error("Received an invalid or empty response from the AI service.");
-            }
+            return result.candidates[0].content.parts[0].text;
         }
 
         function generateDocument() {
             const refNumber = document.getElementById('ref-number-input').value;
-            
             document.getElementById('output-ref').textContent = refNumber;
             document.getElementById('output-products').textContent = document.getElementById('productsAffected').value;
             document.getElementById('output-category').textContent = document.getElementById('category').value;
             document.getElementById('output-title').textContent = document.getElementById('title').value || 'Untitled Release';
-            
             const releaseDate = new Date().toLocaleDateString('en-CA');
             const effectiveDateRaw = document.getElementById('effectiveDate').value;
             const effectiveDate = effectiveDateRaw ? new Date(effectiveDateRaw + 'T00:00:00').toLocaleDateString('en-CA') : 'TBD';
-
             document.getElementById('output-releaseDate').textContent = releaseDate;
             document.getElementById('output-effectiveDate').textContent = effectiveDate;
             document.getElementById('output-overview').textContent = document.getElementById('overview').value;
             document.getElementById('output-details').textContent = document.getElementById('details').value;
             document.getElementById('output-impact').textContent = document.getElementById('impact').value;
-
             const imagesContainer = document.getElementById('output-images');
             imagesContainer.innerHTML = '';
             if (imageFiles.length > 0) {
@@ -495,10 +406,7 @@
                     wrapper.appendChild(img);
                     imagesContainer.appendChild(wrapper);
                 });
-            } else {
-                 document.getElementById('output-images-section').classList.add('hidden');
-            }
-
+            } else { document.getElementById('output-images-section').classList.add('hidden'); }
             switchView('document-view', false);
         }
         
@@ -507,94 +415,53 @@
             const content = document.getElementById('document-output');
             const canvas = await html2canvas(content, { scale: 2, useCORS: true });
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            
             const imgData = canvas.toDataURL('image/jpeg', 0.8);
-            
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
             const canvasAspectRatio = canvas.width / canvas.height;
-
             let finalImgWidth = pdfWidth;
             let finalImgHeight = pdfWidth / canvasAspectRatio;
-
-            if (finalImgHeight > pdfHeight) {
-                finalImgHeight = pdfHeight;
-                finalImgWidth = pdfHeight * canvasAspectRatio;
-            }
-            
+            if (finalImgHeight > pdfHeight) { finalImgHeight = pdfHeight; finalImgWidth = pdfHeight * canvasAspectRatio; }
             const xOffset = (pdfWidth - finalImgWidth) / 2;
             const yOffset = (pdfHeight - finalImgHeight) / 2;
-
             pdf.addImage(imgData, 'JPEG', xOffset, yOffset, finalImgWidth, finalImgHeight);
-            
             return pdf.output('blob');
         }
 
-
         function getFormattedFileName() {
             const today = new Date();
-            const year = today.getFullYear().toString().slice(-2);
-            const month = (today.getMonth() + 1).toString().padStart(2, '0');
-            const day = today.getDate().toString().padStart(2, '0');
-            const dateString = `${year}${month}${day}`;
-
-            const refNumber = document.getElementById('output-ref').textContent;
-            const titleText = document.getElementById('output-title').textContent || 'Untitled-Release';
-            const sanitizedTitle = titleText.replace(/[\s/]/g, '-');
-
-            return `${dateString}-${sanitizedTitle}-${refNumber}.pdf`;
+            const ds = `${today.getFullYear().toString().slice(-2)}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
+            const ref = document.getElementById('output-ref').textContent;
+            const title = (document.getElementById('output-title').textContent || 'Untitled').replace(/[\s/]/g, '-');
+            return `${ds}-${title}-${ref}.pdf`;
         }
 
         async function downloadPDF() {
-            const button = document.getElementById('pdf-download-button');
-            const buttonText = document.getElementById('pdf-download-text');
-            const spinner = document.getElementById('pdf-download-spinner');
-
-            buttonText.textContent = 'Generating...';
-            spinner.classList.remove('hidden');
-            button.disabled = true;
-
+            const btn = document.getElementById('pdf-download-button');
+            btn.disabled = true;
             try {
                 const pdfBlob = await getPdfBlob();
-                const fileName = getFormattedFileName();
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(pdfBlob);
-                link.download = fileName;
+                link.download = getFormattedFileName();
                 link.click();
-                URL.revokeObjectURL(link.href);
-            } catch (error) {
-                console.error("Error generating PDF:", error);
-                alert("Failed to generate PDF. Check console for details.");
-            } finally {
-                buttonText.textContent = 'Download PDF';
-                spinner.classList.add('hidden');
-                button.disabled = false;
-            }
+            } catch (error) { alert("PDF Error: " + error.message); } finally { btn.disabled = false; }
         }
 
         async function saveToFirebase() {
             const button = document.getElementById('firebase-save-button');
-            const buttonText = document.getElementById('firebase-save-text');
-            const spinner = document.getElementById('firebase-spinner');
             const editingId = document.getElementById('editing-id').value;
-
-            buttonText.textContent = editingId ? 'Updating...' : 'Saving...';
-            spinner.classList.remove('hidden');
             button.disabled = true;
-
             try {
                 const userRefNumber = document.getElementById('output-ref').textContent;
-
                 if (!editingId && userRefNumber === suggestedRefNumber) {
                     const counterRef = window.firebase.doc(window.firebase.db, "_config", "releaseCounter");
                     await window.firebase.runTransaction(window.firebase.db, async (transaction) => {
                         const counterDoc = await transaction.get(counterRef);
-                        if (!counterDoc.exists()) throw "Counter document does not exist!";
-                        const newCounterValue = counterDoc.data().value + 1;
-                        transaction.update(counterRef, { value: newCounterValue });
+                        const newCounterValue = (counterDoc.exists() ? counterDoc.data().value : 0) + 1;
+                        transaction.set(counterRef, { value: newCounterValue });
                     });
                 }
-                
                 const releaseData = {
                     refNumber: userRefNumber,
                     title: document.getElementById('output-title').textContent,
@@ -607,35 +474,21 @@
                     impact: document.getElementById('output-impact').textContent,
                     createdAt: window.firebase.serverTimestamp()
                 };
-
                 const pdfBlob = await getPdfBlob();
                 const fileName = getFormattedFileName();
                 const storageRef = window.firebase.ref(window.firebase.storage, `releases/${fileName}`);
                 await window.firebase.uploadBytes(storageRef, pdfBlob);
-                const downloadURL = await window.firebase.getDownloadURL(storageRef);
-                releaseData.pdfUrl = downloadURL;
-                releaseData.storagePath = storageRef.fullPath; // Store the path for deletion
-
+                releaseData.pdfUrl = await window.firebase.getDownloadURL(storageRef);
+                releaseData.storagePath = storageRef.fullPath; 
                 if (editingId) {
-                    const docRef = window.firebase.doc(window.firebase.db, "releases", editingId);
-                    await window.firebase.updateDoc(docRef, releaseData);
-                    alert('Successfully updated release!');
+                    await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, "releases", editingId), releaseData);
                 } else {
                     await window.firebase.addDoc(window.firebase.collection(window.firebase.db, "releases"), releaseData);
-                    alert('Successfully saved to Firebase!');
                 }
-
+                alert('Saved!');
                 await window.loadHistory(); 
                 switchView('history-view'); 
-
-            } catch (error) {
-                console.error("Error saving to Firebase: ", error);
-                alert("Error saving to Firebase. Check the console for details.");
-            } finally {
-                buttonText.textContent = 'Save to Firebase';
-                spinner.classList.add('hidden');
-                button.disabled = false;
-            }
+            } catch (error) { alert("Save Error: " + error.message); } finally { button.disabled = false; }
         }
         
         window.loadHistory = async function() {
@@ -645,19 +498,12 @@
                 const querySnapshot = await window.firebase.getDocs(q);
                 allReleases = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
                 displayReleases(allReleases);
-            } catch (error) {
-                console.error("Error loading history: ", error);
-                const historyResults = document.getElementById('history-results');
-                historyResults.innerHTML = `<div class="text-red-100 border-l-4 border-red-500 bg-red-50 p-4" role="alert"><p class="font-bold text-red-800">Error Loading History</p><p class="text-red-700">Could not fetch data. Please ensure your Firebase Security Rules are set up correctly.</p></div>`;
-            }
+            } catch (error) { console.error("History Error", error); }
         }
 
         function displayReleases(releases) {
             const container = document.getElementById('history-results');
-            if (releases.length === 0) {
-                container.innerHTML = '<p class="text-gray-500">No releases found.</p>';
-                return;
-            }
+            if (releases.length === 0) { container.innerHTML = '<p class="text-gray-500">No releases found.</p>'; return; }
             container.innerHTML = releases.map(release => `
                 <div class="border border-gray-200 p-4 rounded-lg flex justify-between items-center hover:bg-gray-50">
                     <div>
@@ -676,7 +522,6 @@
         window.editRelease = function(id) {
             const release = allReleases.find(r => r.id === id);
             if (!release) return;
-
             document.getElementById('editing-id').value = id;
             document.getElementById('ref-number-input').value = release.refNumber || '';
             document.getElementById('productsAffected').value = release.productsAffected || '';
@@ -686,71 +531,36 @@
             document.getElementById('overview').value = release.overview || '';
             document.getElementById('details').value = release.details || '';
             document.getElementById('impact').value = release.impact || '';
-            
             imageFiles.length = 0;
             document.getElementById('image-preview').innerHTML = '<p class="text-sm text-gray-500 col-span-4">Images cannot be edited. Please re-upload if you need to change them.</p>';
-
             document.getElementById('form-title').textContent = 'Editing Technical Release';
             switchView('form-view', false);
         }
 
         window.deleteRelease = async function(id, storagePath) {
-            if (!confirm('Are you sure you want to permanently delete this technical release? This action cannot be undone.')) {
-                return;
-            }
-
+            if (!confirm('Permanently delete?')) return;
             try {
                 await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, "releases", id));
-                
-                if (storagePath) {
-                    const storageRef = window.firebase.ref(window.firebase.storage, storagePath);
-                    await window.firebase.deleteObject(storageRef);
-                }
-                
-                alert('Release deleted successfully.');
+                if (storagePath) await window.firebase.deleteObject(window.firebase.ref(window.firebase.storage, storagePath));
+                alert('Deleted.');
                 await loadHistory();
-            } catch (error) {
-                console.error("Error deleting release: ", error);
-                alert(`Failed to delete release: ${error.message}`);
-            }
+            } catch (error) { alert("Delete Error: " + error.message); }
         }
 
         window.searchReleases = function() {
-            const searchTerm = document.getElementById('search-input').value.toLowerCase();
-            if (!searchTerm) {
-                displayReleases(allReleases);
-                return;
-            }
-            const filtered = allReleases.filter(r => 
-                (r.title && r.title.toLowerCase().includes(searchTerm)) ||
-                (r.refNumber && r.refNumber.toLowerCase().includes(searchTerm)) ||
-                (r.productsAffected && r.productsAffected.toLowerCase().includes(searchTerm)) ||
-                (r.overview && r.overview.toLowerCase().includes(searchTerm)) ||
-                (r.details && r.details.toLowerCase().includes(searchTerm)) ||
-                (r.impact && r.impact.toLowerCase().includes(searchTerm))
-            );
+            const term = document.getElementById('search-input').value.toLowerCase();
+            if (!term) { displayReleases(allReleases); return; }
+            const filtered = allReleases.filter(r => (r.title && r.title.toLowerCase().includes(term)) || (r.refNumber && r.refNumber.toLowerCase().includes(term)));
             displayReleases(filtered);
         }
 
         async function switchView(viewId, reset = true) {
-            ['form-view', 'history-view', 'document-view'].forEach(id => {
-                document.getElementById(id).classList.add('hidden');
-            });
+            ['form-view', 'history-view', 'document-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
             document.getElementById(viewId).classList.remove('hidden');
-
-            ['generator-tab-button', 'history-tab-button'].forEach(id => {
-                document.getElementById(id).classList.remove('active');
-            });
-
-            if (viewId === 'form-view' || viewId === 'document-view') {
-                document.getElementById('generator-tab-button').classList.add('active');
-            } else if (viewId === 'history-view') {
-                document.getElementById('history-tab-button').classList.add('active');
-            }
-            
-            if (viewId === 'form-view' && reset) {
-               await startNewRelease(false);
-            }
+            ['generator-tab-button', 'history-tab-button'].forEach(id => document.getElementById(id).classList.remove('active'));
+            if (viewId === 'form-view' || viewId === 'document-view') document.getElementById('generator-tab-button').classList.add('active');
+            else if (viewId === 'history-view') document.getElementById('history-tab-button').classList.add('active');
+            if (viewId === 'form-view' && reset) await startNewRelease(false);
         }
 
         async function startNewRelease(switchToForm = true) {
@@ -763,27 +573,18 @@
             document.getElementById('overview').value = '';
             document.getElementById('details').value = '';
             document.getElementById('impact').value = '';
-            
-            const fileInput = document.getElementById('images');
-            fileInput.value = '';
+            document.getElementById('images').value = '';
             document.getElementById('image-preview').innerHTML = '';
             document.getElementById('generate-headings-button').classList.add('hidden');
             imageFiles.length = 0;
             await updateRefDisplay();
-            
-            if (switchToForm) {
-                switchView('form-view', false);
-            }
+            if (switchToForm) switchView('form-view', false);
         }
 
         async function handleGeneratorTabClick() {
-            if (!document.getElementById('editing-id').value) {
-                await startNewRelease(true);
-            } else {
-                switchView('form-view', false);
-            }
+            if (!document.getElementById('editing-id').value) await startNewRelease(true);
+            else switchView('form-view', false);
         }
     </script>
 </body>
 </html>
-
