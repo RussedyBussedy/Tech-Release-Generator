@@ -361,7 +361,8 @@
         });
 
         async function callGemini(prompt, model, responseSchema = null) {
-            const apiKey = "AIzaSyC-yMxXO1HXwrRsN4Xz71363ul5HHtgxXA"; // Your Gemini AI Key
+            // Updated Generative Language API Key
+            const apiKey = "AIzaSyA-2CrpAnIbqKSG_WkfV_lEWt__I3d2HUk"; 
             const payload = { contents: [{ role: "user", parts: Array.isArray(prompt) ? prompt : [{ text: prompt }] }] };
             if (responseSchema) payload.generationConfig = { responseMimeType: "application/json", responseSchema: responseSchema };
             const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
