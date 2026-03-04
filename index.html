@@ -241,14 +241,14 @@
             renderSectionsForm();
         }
 
-        // Ensure the UI renders immediately, regardless of Firebase connection speeds
-        document.addEventListener('DOMContentLoaded', () => {
-            if (documentSections.length === 0) {
-                initDefaultSections();
-            }
-        });
+        // Ensure the UI renders immediately. 
+        // Since this script is at the bottom of the body, the DOM is already parsed and ready.
+        if (documentSections.length === 0) {
+            initDefaultSections();
+        }
 
-        document.addEventListener('firebaseReady', async () => {
+        // CORRECTED: Attach the listener to the 'window' object, exactly where the event is dispatched
+        window.addEventListener('firebaseReady', async () => {
              try {
                 await window.loadHistory();
                 await window.updateRefDisplay();
