@@ -30,19 +30,28 @@
             max-width: 210mm; 
             margin-left: auto;
             margin-right: auto;
+            background: white; /* Ensure white background for slicing */
         }
         .tab-button.active {
             border-bottom-color: #3b82f6;
             color: #3b82f6;
             font-weight: 600;
         }
-        #drop-zone {
+        .drop-zone {
             border: 2px dashed #cbd5e1;
             transition: border-color 0.2s, background-color 0.2s;
         }
-        #drop-zone.dragover {
+        .drop-zone.dragover {
             border-color: #3b82f6;
             background-color: #eff6ff;
+        }
+        /* Dynamic Section Styling */
+        .section-block {
+            animation: fadeIn 0.3s ease-in-out;
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
@@ -67,73 +76,54 @@
                 <div class="flex justify-between items-center mb-8">
                     <div>
                         <h1 id="form-title" class="text-3xl font-bold text-gray-900">Technical Release Generator</h1>
-                        <p class="text-gray-600">Fill in the details below to create a new document.</p>
+                        <p class="text-gray-600">Structure your document using the block manager below.</p>
                     </div>
                     <div class="text-right">
                         <label for="ref-number-input" class="block text-sm font-medium text-gray-700 text-right">Reference Number</label>
                         <input type="text" id="ref-number-input" class="w-48 mt-1 px-3 py-2 border border-gray-300 rounded-lg text-right font-bold text-blue-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Loading...">
                     </div>
                 </div>
-                <div class="space-y-6">
-                    <div>
-                        <label for="productsAffected" class="block text-sm font-medium text-gray-700 mb-1">Products Affected</label>
-                        <input type="text" id="productsAffected" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g., Alpha Motors, Sonesse 30 WireFree">
-                    </div>
-                    <div>
-                        <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Release Category</label>
-                        <select id="category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                            <option>Motors</option> <option>Fabrics</option> <option>Hardware</option> <option>Software</option> <option>Installation Procedure</option> <option>Other</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                        <input type="text" id="title" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g., Somfy Zigbee Motors and Tahoma Pro">
-                    </div>
-                    <div>
-                        <label for="effectiveDate" class="block text-sm font-medium text-gray-700 mb-1">Effective Date</label>
-                        <input type="date" id="effectiveDate" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                    </div>
-                    <div>
-                        <label for="overview" class="block text-sm font-medium text-gray-700 mb-1">Overview</label>
-                        <textarea id="overview" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Provide a brief overview of the technical release."></textarea>
-                        <button onclick="refineText('overview')" class="mt-2 px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200 transition flex items-center gap-2">
-                            <span class="refine-text">Refine with AI</span> <span class="spinner hidden"></span>
-                        </button>
-                    </div>
-                    <div>
-                        <label for="details" class="block text-sm font-medium text-gray-700 mb-1">Details</label>
-                        <textarea id="details" rows="6" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Provide the specific details, features, or changes."></textarea>
-                        <button onclick="refineText('details')" class="mt-2 px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200 transition flex items-center gap-2">
-                            <span class="refine-text">Refine with AI</span> <span class="spinner hidden"></span>
-                        </button>
-                    </div>
-                    <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Images</label>
-                        <div id="drop-zone" class="flex justify-center items-center w-full p-8 rounded-lg cursor-pointer">
-                            <div class="text-center">
-                                <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
-                                    <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
-                                </svg>
-                                <p class="mt-2 text-sm text-gray-600"><span class="font-semibold">Click to upload</span> or drag and drop</p>
-                                <p class="text-xs text-gray-500">PNG, JPG, GIF up to 10MB</p>
-                            </div>
-                            <input type="file" id="images" multiple accept="image/*" class="hidden">
+
+                <!-- Global Header Data -->
+                <div class="space-y-6 mb-8 pb-8 border-b border-gray-200">
+                    <h3 class="text-lg font-bold text-gray-800">Document Header Info</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label for="productsAffected" class="block text-sm font-medium text-gray-700 mb-1">Products Affected</label>
+                            <input type="text" id="productsAffected" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g., Alpha Motors">
                         </div>
-                        <div id="image-preview" class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4"></div>
-                        <button id="generate-headings-button" onclick="generateImageHeadings()" class="hidden mt-4 px-4 py-2 text-sm font-semibold text-white bg-green-600 rounded-md hover:bg-green-700 transition flex items-center gap-2">
-                            <span class="refine-text">Generate Image Headings with AI</span> <span class="spinner hidden"></span>
-                        </button>
-                    </div>
-                    <div>
-                        <label for="impact" class="block text-sm font-medium text-gray-700 mb-1">Impact and Action Required</label>
-                        <textarea id="impact" rows="4" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Explain the impact on users and what actions are required from them."></textarea>
-                        <button onclick="refineText('impact')" class="mt-2 px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200 transition flex items-center gap-2">
-                            <span class="refine-text">Refine with AI</span> <span class="spinner hidden"></span>
-                        </button>
+                        <div>
+                            <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Release Category</label>
+                            <select id="category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                                <option>Motors</option> <option>Fabrics</option> <option>Hardware</option> <option>Software</option> <option>Installation Procedure</option> <option>Other</option>
+                            </select>
+                        </div>
+                        <div class="md:col-span-2">
+                            <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Title</label>
+                            <input type="text" id="title" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g., Somfy Zigbee Motors">
+                        </div>
+                        <div>
+                            <label for="effectiveDate" class="block text-sm font-medium text-gray-700 mb-1">Effective Date</label>
+                            <input type="date" id="effectiveDate" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
+                        </div>
                     </div>
                 </div>
-                <div class="mt-8">
-                    <button id="generate-button" onclick="generateDocument()" class="w-full bg-blue-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-105">
+
+                <!-- Dynamic Sections Container -->
+                <div class="mb-4 flex items-center justify-between">
+                    <h3 class="text-lg font-bold text-gray-800">Page Content Blocks</h3>
+                    <div class="flex gap-2">
+                        <button onclick="addSection('text')" class="px-3 py-1.5 bg-indigo-100 text-indigo-700 font-semibold rounded hover:bg-indigo-200 transition text-sm flex items-center gap-1">+ Text Block</button>
+                        <button onclick="addSection('images')" class="px-3 py-1.5 bg-emerald-100 text-emerald-700 font-semibold rounded hover:bg-emerald-200 transition text-sm flex items-center gap-1">+ Image Gallery</button>
+                    </div>
+                </div>
+
+                <div id="dynamic-sections-container" class="space-y-6">
+                    <!-- Sections generated via JS -->
+                </div>
+
+                <div class="mt-10">
+                    <button id="generate-button" onclick="generateDocument()" class="w-full bg-blue-600 text-white font-bold py-4 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-[1.01] shadow-md">
                         Preview Document
                     </button>
                 </div>
@@ -159,7 +149,7 @@
                 <button onclick="startNewRelease()" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition">Start New Release</button>
                 <button onclick="switchView('form-view')" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition">Back to Editor</button>
                 <button id="pdf-download-button" onclick="downloadPDF()" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition flex items-center gap-2">
-                    <span id="pdf-download-text">Download PDF</span>
+                    <span id="pdf-download-text">Download Multi-Page PDF</span>
                     <span id="pdf-download-spinner" class="spinner hidden"></span>
                 </button>
                 <button id="firebase-save-button" onclick="saveToFirebase()" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
@@ -180,11 +170,10 @@
                             <div class="bg-gray-50 p-3 rounded-lg col-span-2"><p class="font-semibold text-gray-600">Products Affected</p><p id="output-products" class="text-gray-900 font-medium break-words"></p></div>
                         </div>
                     </header>
-                    <main class="space-y-8">
-                        <div id="output-overview-section"><h3 class="text-xl font-bold mb-3 text-gray-800 border-b-2 border-blue-200 pb-2">Overview</h3><p id="output-overview" class="text-gray-700 leading-relaxed whitespace-pre-wrap break-words"></p></div>
-                        <div id="output-details-section"><h3 class="text-xl font-bold mb-3 text-gray-800 border-b-2 border-blue-200 pb-2">Details</h3><p id="output-details" class="text-gray-700 leading-relaxed whitespace-pre-wrap break-words"></p></div>
-                        <div id="output-images-section" class="hidden"><h3 class="text-xl font-bold mb-3 text-gray-800 border-b-2 border-blue-200 pb-2">Images</h3><div id="output-images" class="mt-4 grid grid-cols-2 gap-4"></div></div>
-                        <div id="output-impact-section"><div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg"><div class="flex"><div class="flex-shrink-0"><svg class="h-5 w-5 text-yellow-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.21 3.03-1.742 3.03H4.42c-1.532 0-2.492-1.696-1.742-3.03l5.58-9.92zM10 13a1 1 0 110-2 1 1 0 010 2zm-1-8a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd" /></svg></div><div class="ml-3"><h3 class="text-lg font-bold text-yellow-800">Impact and Action Required</h3><div class="mt-2 text-sm text-yellow-700"><p id="output-impact" class="whitespace-pre-wrap"></p></div></div></div></div></div>
+                    
+                    <!-- Dynamic Sections Output -->
+                    <main id="output-sections-container" class="space-y-8">
+                        <!-- Filled via JS -->
                     </main>
                 </div>
             </div>
@@ -196,11 +185,10 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, serverTimestamp, query, orderBy, runTransaction, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-        // ADDED: Import the Auth module just like OrderBot does
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
         const firebaseConfig = {
-          apiKey: "AIzaSyCAnOF4XM_sYW1-s4iEM7i3JmiB7zFCSkw", // Public Identifier for Firebase
+          apiKey: "AIzaSyCAnOF4XM_sYW1-s4iEM7i3JmiB7zFCSkw", 
           authDomain: "tech-release-generator.firebaseapp.com",
           projectId: "tech-release-generator",
           storageBucket: "tech-release-generator.firebasestorage.app",
@@ -212,37 +200,56 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const storage = getStorage(app);
-        const auth = getAuth(app); // Initialize Authentication
+        const auth = getAuth(app); 
 
         window.firebase = { db, storage, auth, collection, addDoc, getDocs, ref, uploadBytes, getDownloadURL, doc, updateDoc, serverTimestamp, query, orderBy, runTransaction, getDoc, setDoc, deleteDoc, deleteObject };
         
-        // Log the user in anonymously before triggering the ready event
         signInAnonymously(auth).then(() => {
             console.log("Logged in to Firebase securely.");
             window.dispatchEvent(new CustomEvent('firebaseReady'));
         }).catch((error) => {
             console.error("Firebase Auth Error:", error);
-            // Dispatch anyway so the UI doesn't hang, though saving will likely fail
+            if (error.code === 'auth/configuration-not-found' || error.code === 'auth/operation-not-allowed') {
+                 alert("Firebase Authentication is not enabled for this project.\n\nPlease go to your Firebase Console -> Build -> Authentication -> Get Started.\nThen go to 'Sign-in method' and enable the 'Anonymous' provider so you can save PDFs to Storage.");
+            }
             window.dispatchEvent(new CustomEvent('firebaseReady'));
         });
     </script>
     
     <script>
+        // Use the exact same proxy URL as OrderBot
+        const PROXY_API_URL = 'https://gemini-secure-proxy-51064902388.africa-south1.run.app';
+
+        let allReleases = []; 
+        let suggestedRefNumber = '';
+        
+        // Dynamic Blocks State
+        let documentSections = [];
+
+        function generateId() {
+            return 'sec_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        // Initialize default layout
+        function initDefaultSections() {
+            documentSections = [
+                { id: generateId(), type: 'text', title: 'Overview', content: '' },
+                { id: generateId(), type: 'text', title: 'Details', content: '' },
+                { id: generateId(), type: 'images', title: 'Images', images: [] },
+                { id: generateId(), type: 'text', title: 'Impact and Action Required', content: '' }
+            ];
+            renderSectionsForm();
+        }
+
         document.addEventListener('firebaseReady', async () => {
              try {
+                initDefaultSections();
                 await window.loadHistory();
                 await window.updateRefDisplay();
             } catch (e) {
                 console.error("Initial app load failed.", e);
             }
         });
-
-        // Use the exact same proxy URL as OrderBot
-        const PROXY_API_URL = 'https://gemini-secure-proxy-51064902388.africa-south1.run.app';
-
-        const imageFiles = []; 
-        let allReleases = []; 
-        let suggestedRefNumber = '';
 
         async function getNextRefNumber() {
             const counterRef = window.firebase.doc(window.firebase.db, "_config", "releaseCounter");
@@ -267,65 +274,149 @@
              document.getElementById('ref-number-input').value = suggestedRefNumber;
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            setupDragAndDrop();
+        // --- DYNAMIC SECTION UI MANAGER ---
+        
+        function addSection(type) {
+            documentSections.push({
+                id: generateId(),
+                type: type,
+                title: type === 'text' ? 'New Text Section' : 'New Image Gallery',
+                content: '',
+                images: []
+            });
+            renderSectionsForm();
+        }
+
+        function moveSection(index, direction) {
+            if (direction === 'up' && index > 0) {
+                [documentSections[index - 1], documentSections[index]] = [documentSections[index], documentSections[index - 1]];
+            } else if (direction === 'down' && index < documentSections.length - 1) {
+                [documentSections[index], documentSections[index + 1]] = [documentSections[index + 1], documentSections[index]];
+            }
+            renderSectionsForm();
+        }
+
+        function deleteSection(index) {
+            if(confirm("Delete this section block?")) {
+                documentSections.splice(index, 1);
+                renderSectionsForm();
+            }
+        }
+
+        function renderSectionsForm() {
+            const container = document.getElementById('dynamic-sections-container');
+            container.innerHTML = '';
+
+            documentSections.forEach((section, index) => {
+                const block = document.createElement('div');
+                block.className = 'section-block bg-white border border-gray-200 rounded-lg p-5 shadow-sm relative group';
+                
+                // Block Controls
+                const controls = `
+                    <div class="absolute right-4 top-4 flex items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
+                        <button onclick="moveSection(${index}, 'up')" class="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="Move Up">↑</button>
+                        <button onclick="moveSection(${index}, 'down')" class="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="Move Down">↓</button>
+                        <button onclick="deleteSection(${index})" class="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded ml-2" title="Delete">✕</button>
+                    </div>
+                `;
+
+                // Title Input
+                const titleInput = `
+                    <div class="mb-4 pr-24">
+                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Section Title</label>
+                        <input type="text" value="${section.title}" oninput="documentSections[${index}].title = this.value" class="w-full text-lg font-bold px-0 py-1 border-0 border-b border-dashed border-gray-300 focus:ring-0 focus:border-blue-500 transition bg-transparent">
+                    </div>
+                `;
+
+                let bodyHtml = '';
+
+                if (section.type === 'text') {
+                    bodyHtml = `
+                        <div>
+                            <textarea id="textarea-${section.id}" rows="4" oninput="documentSections[${index}].content = this.value" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Enter content for this section...">${section.content || ''}</textarea>
+                            <button onclick="refineSectionText('${section.id}', ${index})" class="mt-2 px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200 transition flex items-center gap-2 w-max">
+                                <span class="refine-text">Refine Section with AI</span> <span class="spinner hidden"></span>
+                            </button>
+                        </div>
+                    `;
+                } else if (section.type === 'images') {
+                    // Image Grid HTML
+                    const imgGridHtml = section.images.map((imgObj, imgIndex) => `
+                        <div class="relative group border rounded-lg p-2 bg-gray-50">
+                            <img src="${imgObj.src}" class="w-full h-24 object-cover rounded shadow-sm border mb-2">
+                            <input type="text" value="${imgObj.heading || ''}" oninput="documentSections[${index}].images[${imgIndex}].heading = this.value" class="w-full px-2 py-1 border border-gray-300 rounded-md text-xs" placeholder="Image heading...">
+                            <button onclick="removeImageFromSection(${index}, ${imgIndex})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow">✕</button>
+                        </div>
+                    `).join('');
+
+                    bodyHtml = `
+                        <div>
+                            <div id="drop-zone-${section.id}" class="drop-zone flex justify-center items-center w-full p-6 rounded-lg cursor-pointer bg-gray-50 hover:bg-blue-50 transition" onclick="document.getElementById('file-${section.id}').click()">
+                                <div class="text-center">
+                                    <p class="text-sm text-gray-600"><span class="font-semibold">Click to add images</span> or drag and drop</p>
+                                </div>
+                                <input type="file" id="file-${section.id}" multiple accept="image/*" class="hidden" onchange="handleSectionFiles(this.files, ${index})">
+                            </div>
+                            <div class="mt-4 grid grid-cols-2 md:grid-cols-4 gap-4" id="img-grid-${section.id}">
+                                ${imgGridHtml}
+                            </div>
+                            ${section.images.length > 0 ? `
+                            <button onclick="generateHeadingsForSection(${index})" class="mt-4 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-100 rounded-md hover:bg-emerald-200 transition flex items-center gap-2 w-max">
+                                <span class="refine-text">Generate Headings with AI</span> <span class="spinner hidden"></span>
+                            </button>
+                            ` : ''}
+                        </div>
+                    `;
+                }
+
+                block.innerHTML = controls + titleInput + bodyHtml;
+                container.appendChild(block);
+                
+                // Drag drop listeners for specific section
+                if (section.type === 'images') {
+                    const dz = document.getElementById(`drop-zone-${section.id}`);
+                    dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
+                    dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+                    dz.addEventListener('drop', (e) => { e.preventDefault(); dz.classList.remove('dragover'); handleSectionFiles(e.dataTransfer.files, index); });
+                }
+            });
+        }
+
+        // --- IMAGE HANDLING PER SECTION ---
+        const toBase64 = file => new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.readAsDataURL(file);
+            reader.onload = () => resolve(reader.result);
+            reader.onerror = error => reject(error);
         });
 
-        function setupDragAndDrop() {
-            const dropZone = document.getElementById('drop-zone');
-            const fileInput = document.getElementById('images');
-            dropZone.addEventListener('click', () => fileInput.click());
-            dropZone.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('dragover'); });
-            dropZone.addEventListener('dragleave', () => dropZone.classList.remove('dragover'));
-            dropZone.addEventListener('drop', (e) => { e.preventDefault(); dropZone.classList.remove('dragover'); handleFiles(e.dataTransfer.files); });
-            fileInput.addEventListener('change', (e) => handleFiles(e.target.files));
-        }
-
-        function handleFiles(files) {
-            const preview = document.getElementById('image-preview');
-            const headingsButton = document.getElementById('generate-headings-button');
-            for (const file of files) {
-                if (!file.type.startsWith('image/')){ continue }
-                const fileId = `file-${Date.now()}-${Math.random()}`;
-                const fileData = { id: fileId, file: file, src: '', heading: '' }; 
+        function handleSectionFiles(files, sectionIndex) {
+            if (!files || files.length === 0) return;
+            const section = documentSections[sectionIndex];
+            
+            Array.from(files).forEach(file => {
+                if (!file.type.startsWith('image/')) return;
                 toBase64(file).then(base64_src => {
-                    fileData.src = base64_src;
-                    imageFiles.push(fileData);
-                    const wrapper = document.createElement('div');
-                    wrapper.id = fileId;
-                    wrapper.className = 'relative group';
-                    const img = document.createElement('img');
-                    img.src = fileData.src;
-                    img.className = 'w-full h-32 object-cover rounded-lg border';
-                    const input = document.createElement('input');
-                    input.type = 'text';
-                    input.className = 'image-heading-input mt-2 w-full px-2 py-1 border border-gray-300 rounded-md text-sm';
-                    input.placeholder = 'Image heading...';
-                    input.oninput = () => fileData.heading = input.value;
-                    wrapper.appendChild(img);
-                    wrapper.appendChild(input);
-                    preview.appendChild(wrapper);
+                    section.images.push({ src: base64_src, heading: '', mimeType: file.type });
+                    renderSectionsForm(); // Re-render to show new images
                 });
-            }
-            if (files.length > 0) headingsButton.classList.remove('hidden');
+            });
         }
 
-        // Updated API Function to use Secure Proxy
+        function removeImageFromSection(sectionIndex, imgIndex) {
+            documentSections[sectionIndex].images.splice(imgIndex, 1);
+            renderSectionsForm();
+        }
+
+        // --- AI API PROXY INTEGRATION ---
         async function callGemini(prompt, model, responseSchema = null) {
             const geminiPayload = { 
                 contents: [{ role: "user", parts: Array.isArray(prompt) ? prompt : [{ text: prompt }] }] 
             };
-            
             if (responseSchema) {
                 geminiPayload.generationConfig = { responseMimeType: "application/json", responseSchema: responseSchema };
             }
-
-            // Package the request exactly how the Cloud Run proxy expects it
-            const proxyPayload = {
-                model: model,
-                payload: geminiPayload
-            };
-
+            const proxyPayload = { model: model, payload: geminiPayload };
             const response = await fetch(PROXY_API_URL, { 
                 method: 'POST', 
                 headers: { 'Content-Type': 'application/json' }, 
@@ -337,126 +428,174 @@
                 try { const data = await response.json(); if (data.error) msg = data.error.message; } catch (e) {}
                 throw new Error(msg);
             }
-
             const result = await response.json();
             return result.candidates[0].content.parts[0].text;
         }
 
-        async function refineText(elementId) {
-            const textarea = document.getElementById(elementId);
+        async function refineSectionText(sectionId, index) {
+            const textarea = document.getElementById(`textarea-${sectionId}`);
             const button = textarea.nextElementSibling;
             const spinner = button.querySelector('.spinner');
             const buttonText = button.querySelector('.refine-text');
-            const originalText = textarea.value;
+            const originalText = documentSections[index].content;
+            
             if (!originalText.trim()) { alert("Please enter some text to refine."); return; }
+            
             spinner.classList.remove('hidden');
             buttonText.textContent = 'Refining...';
             button.disabled = true;
             try {
                 const prompt = `Rewrite and improve the following text for a professional technical release document. Enhance its clarity, grammar, and formal tone. Respond with only the improved text. Original text: "${originalText}"`;
                 const refinedText = await callGemini(prompt, 'gemini-3-flash-preview');
-                textarea.value = refinedText.trim();
+                documentSections[index].content = refinedText.trim();
+                renderSectionsForm(); // Refresh UI
             } catch (error) {
                 alert(`Error refining text: ${error.message}`);
             } finally {
-                spinner.classList.add('hidden');
-                buttonText.textContent = 'Refine with AI';
-                button.disabled = false;
+                if(document.getElementById(`textarea-${sectionId}`)) { // Check if still exists
+                    spinner.classList.add('hidden');
+                    buttonText.textContent = 'Refine Section with AI';
+                    button.disabled = false;
+                }
             }
         }
         
-        async function generateImageHeadings() {
-            const button = document.getElementById('generate-headings-button');
-            const spinner = button.querySelector('.spinner');
-            const buttonText = button.querySelector('.refine-text');
-            if (imageFiles.length === 0) { alert("Please upload images first."); return; }
+        async function generateHeadingsForSection(index) {
+            const section = documentSections[index];
+            if (section.images.length === 0) return;
+            
+            // Gather context from all text sections
+            let context = `Title: ${document.getElementById('title').value}\n`;
+            documentSections.filter(s => s.type === 'text').forEach(s => {
+                context += `${s.title}: ${s.content}\n`;
+            });
+
+            const promptParts = [{ text: `Based on the following document context, generate a short, descriptive heading for each image. Context: ${context}\n\n` }];
+            section.images.forEach(img => {
+                promptParts.push({ inlineData: { mimeType: img.mimeType || 'image/jpeg', data: img.src.split(',')[1] } });
+                promptParts.push({ text: "\n" });
+            });
+
+            // Re-render immediately to show loading state (complex in pure JS, let's just use alert/fallback if needed, or simple UI overlay)
+            const block = document.querySelectorAll('.section-block')[index];
+            const btn = block.querySelector('button.bg-emerald-100');
+            const spinner = btn.querySelector('.spinner');
+            const btnText = btn.querySelector('.refine-text');
+            
             spinner.classList.remove('hidden');
-            buttonText.textContent = 'Generating...';
-            button.disabled = true;
+            btnText.textContent = 'Generating...';
+            btn.disabled = true;
+
             try {
-                const context = `Title: ${document.getElementById('title').value}\nOverview: ${document.getElementById('overview').value}`;
-                const promptParts = [{ text: `Based on the following context, generate a short, descriptive heading for each image.\n\nContext: ${context}\n\n` }];
-                for (const fileData of imageFiles) {
-                    promptParts.push({ inlineData: { mimeType: fileData.file.type, data: fileData.src.split(',')[1] } });
-                    promptParts.push({ text: "\n" });
-                }
                 const schema = { type: "OBJECT", properties: { headings: { type: "ARRAY", items: { "type": "STRING" } } } };
                 const resultText = await callGemini(promptParts, 'gemini-3-flash-preview', schema);
                 const resultJson = JSON.parse(resultText);
-                if (resultJson.headings && resultJson.headings.length === imageFiles.length) {
-                    resultJson.headings.forEach((heading, index) => {
-                        const fileData = imageFiles[index];
-                        fileData.heading = heading;
-                        const wrapper = document.getElementById(fileData.id);
-                        if (wrapper) wrapper.querySelector('.image-heading-input').value = heading;
+                
+                if (resultJson.headings && resultJson.headings.length === section.images.length) {
+                    resultJson.headings.forEach((heading, i) => {
+                        section.images[i].heading = heading;
                     });
+                    renderSectionsForm();
                 } else { throw new Error("Incorrect number of headings received."); }
             } catch (error) {
                 alert(`Error generating image headings: ${error.message}`);
-            } finally {
                 spinner.classList.add('hidden');
-                buttonText.textContent = 'Generate Image Headings with AI';
-                button.disabled = false;
+                btnText.textContent = 'Generate Headings with AI';
+                btn.disabled = false;
             }
         }
 
-        const toBase64 = file => new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
-        });
-
+        // --- PREVIEW DOCUMENT ---
         function generateDocument() {
             const refNumber = document.getElementById('ref-number-input').value;
             document.getElementById('output-ref').textContent = refNumber;
             document.getElementById('output-products').textContent = document.getElementById('productsAffected').value;
             document.getElementById('output-category').textContent = document.getElementById('category').value;
             document.getElementById('output-title').textContent = document.getElementById('title').value || 'Untitled Release';
+            
             const releaseDate = new Date().toLocaleDateString('en-CA');
             const effectiveDateRaw = document.getElementById('effectiveDate').value;
             const effectiveDate = effectiveDateRaw ? new Date(effectiveDateRaw + 'T00:00:00').toLocaleDateString('en-CA') : 'TBD';
             document.getElementById('output-releaseDate').textContent = releaseDate;
             document.getElementById('output-effectiveDate').textContent = effectiveDate;
-            document.getElementById('output-overview').textContent = document.getElementById('overview').value;
-            document.getElementById('output-details').textContent = document.getElementById('details').value;
-            document.getElementById('output-impact').textContent = document.getElementById('impact').value;
-            const imagesContainer = document.getElementById('output-images');
-            imagesContainer.innerHTML = '';
-            if (imageFiles.length > 0) {
-                document.getElementById('output-images-section').classList.remove('hidden');
-                imageFiles.forEach(fileData => {
-                    const wrapper = document.createElement('div');
-                    const heading = document.createElement('h4');
-                    heading.className = 'text-md font-semibold text-gray-700 mb-2';
-                    heading.textContent = fileData.heading || '';
-                    const img = document.createElement('img');
-                    img.src = fileData.src;
-                    img.className = 'w-full rounded-lg shadow-md border';
-                    img.crossOrigin = "anonymous";
-                    wrapper.appendChild(heading);
-                    wrapper.appendChild(img);
-                    imagesContainer.appendChild(wrapper);
-                });
-            } else { document.getElementById('output-images-section').classList.add('hidden'); }
+
+            // Render Dynamic Sections
+            const outContainer = document.getElementById('output-sections-container');
+            outContainer.innerHTML = '';
+
+            documentSections.forEach(section => {
+                const secDiv = document.createElement('div');
+                secDiv.className = "mb-8";
+                
+                const titleHtml = `<h3 class="text-xl font-bold mb-3 text-gray-800 border-b-2 border-blue-200 pb-2">${section.title}</h3>`;
+                
+                if (section.type === 'text') {
+                    secDiv.innerHTML = `${titleHtml}<p class="text-gray-700 leading-relaxed whitespace-pre-wrap break-words">${section.content}</p>`;
+                    // Add yellow alert styling if it's an impact section (legacy support styling)
+                    if (section.title.toLowerCase().includes('impact')) {
+                        secDiv.innerHTML = `
+                            <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
+                                <div class="flex">
+                                    <div class="flex-shrink-0"><svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.21 3.03-1.742 3.03H4.42c-1.532 0-2.492-1.696-1.742-3.03l5.58-9.92zM10 13a1 1 0 110-2 1 1 0 010 2zm-1-8a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd" /></svg></div>
+                                    <div class="ml-3"><h3 class="text-lg font-bold text-yellow-800">${section.title}</h3><div class="mt-2 text-sm text-yellow-700"><p class="whitespace-pre-wrap">${section.content}</p></div></div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                } else if (section.type === 'images' && section.images.length > 0) {
+                    const gridHtml = section.images.map(img => `
+                        <div>
+                            <h4 class="text-sm font-semibold text-gray-700 mb-1 break-words">${img.heading || ''}</h4>
+                            <img src="${img.src}" class="w-full rounded-lg shadow-sm border crossOrigin="anonymous">
+                        </div>
+                    `).join('');
+                    secDiv.innerHTML = `${titleHtml}<div class="mt-4 grid grid-cols-2 gap-4">${gridHtml}</div>`;
+                } else if (section.type === 'images') {
+                     return; // Skip empty image galleries
+                }
+                
+                outContainer.appendChild(secDiv);
+            });
+
             switchView('document-view', false);
         }
         
+        // --- MULTI-PAGE PDF GENERATOR ---
         async function getPdfBlob() {
             const { jsPDF } = window.jspdf;
             const content = document.getElementById('document-output');
-            const canvas = await html2canvas(content, { scale: 2, useCORS: true });
+            
+            // Wait for images to load just in case
+            await new Promise(resolve => setTimeout(resolve, 500));
+
+            const canvas = await html2canvas(content, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+            const imgData = canvas.toDataURL('image/jpeg', 0.95);
+            
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            const imgData = canvas.toDataURL('image/jpeg', 0.8);
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
-            const canvasAspectRatio = canvas.width / canvas.height;
-            let finalImgWidth = pdfWidth;
-            let finalImgHeight = pdfWidth / canvasAspectRatio;
-            if (finalImgHeight > pdfHeight) { finalImgHeight = pdfHeight; finalImgWidth = pdfHeight * canvasAspectRatio; }
-            const xOffset = (pdfWidth - finalImgWidth) / 2;
-            const yOffset = (pdfHeight - finalImgHeight) / 2;
-            pdf.addImage(imgData, 'JPEG', xOffset, yOffset, finalImgWidth, finalImgHeight);
+            
+            // Image mapping ratios
+            const imgWidth = canvas.width;
+            const imgHeight = canvas.height;
+            const ratio = pdfWidth / imgWidth;
+            const scaledTotalHeight = imgHeight * ratio;
+
+            let heightLeft = scaledTotalHeight;
+            let position = 0; // Vertical offset on the PDF page
+
+            // First page
+            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, scaledTotalHeight);
+            heightLeft -= pdfHeight;
+
+            // Loop for additional pages, slicing the canvas image downwards
+            while (heightLeft > 0) {
+                position -= pdfHeight; // Shift the image up by exactly one PDF page height
+                pdf.addPage();
+                pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, scaledTotalHeight);
+                heightLeft -= pdfHeight;
+            }
+
             return pdf.output('blob');
         }
 
@@ -470,14 +609,26 @@
 
         async function downloadPDF() {
             const btn = document.getElementById('pdf-download-button');
+            const btnText = document.getElementById('pdf-download-text');
+            const spinner = document.getElementById('pdf-download-spinner');
+
             btn.disabled = true;
+            btnText.textContent = "Processing Pages...";
+            spinner.classList.remove('hidden');
+
             try {
                 const pdfBlob = await getPdfBlob();
                 const link = document.createElement('a');
                 link.href = URL.createObjectURL(pdfBlob);
                 link.download = getFormattedFileName();
                 link.click();
-            } catch (error) { alert("PDF Error: " + error.message); } finally { btn.disabled = false; }
+            } catch (error) { 
+                alert("PDF Error: " + error.message); 
+            } finally { 
+                btn.disabled = false; 
+                btnText.textContent = "Download Multi-Page PDF";
+                spinner.classList.add('hidden');
+            }
         }
 
         async function saveToFirebase() {
@@ -494,6 +645,8 @@
                         transaction.set(counterRef, { value: newCounterValue });
                     });
                 }
+                
+                // Construct Data Object (Now saving the entire dynamic sections array)
                 const releaseData = {
                     refNumber: userRefNumber,
                     title: document.getElementById('output-title').textContent,
@@ -501,17 +654,17 @@
                     category: document.getElementById('output-category').textContent,
                     releaseDate: document.getElementById('output-releaseDate').textContent,
                     effectiveDate: document.getElementById('output-effectiveDate').textContent,
-                    overview: document.getElementById('output-overview').textContent,
-                    details: document.getElementById('output-details').textContent,
-                    impact: document.getElementById('output-impact').textContent,
+                    sections: documentSections, // Dynamic Payload
                     createdAt: window.firebase.serverTimestamp()
                 };
+
                 const pdfBlob = await getPdfBlob();
                 const fileName = getFormattedFileName();
                 const storageRef = window.firebase.ref(window.firebase.storage, `releases/${fileName}`);
                 await window.firebase.uploadBytes(storageRef, pdfBlob);
                 releaseData.pdfUrl = await window.firebase.getDownloadURL(storageRef);
                 releaseData.storagePath = storageRef.fullPath; 
+                
                 if (editingId) {
                     await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, "releases", editingId), releaseData);
                 } else {
@@ -560,11 +713,22 @@
             document.getElementById('category').value = release.category || 'Motors';
             document.getElementById('title').value = release.title || '';
             document.getElementById('effectiveDate').value = release.effectiveDate || '';
-            document.getElementById('overview').value = release.overview || '';
-            document.getElementById('details').value = release.details || '';
-            document.getElementById('impact').value = release.impact || '';
-            imageFiles.length = 0;
-            document.getElementById('image-preview').innerHTML = '<p class="text-sm text-gray-500 col-span-4">Images cannot be edited. Please re-upload if you need to change them.</p>';
+            
+            // Legacy mapping for old static structure vs new dynamic array
+            if (release.sections && Array.isArray(release.sections)) {
+                // Deep copy so we don't accidentally mutate the history state
+                documentSections = JSON.parse(JSON.stringify(release.sections));
+            } else {
+                // Legacy Map
+                documentSections = [
+                    { id: generateId(), type: 'text', title: 'Overview', content: release.overview || '' },
+                    { id: generateId(), type: 'text', title: 'Details', content: release.details || '' },
+                    { id: generateId(), type: 'images', title: 'Legacy Images', images: [] }, // Can't easily retrieve old base64 strings
+                    { id: generateId(), type: 'text', title: 'Impact and Action Required', content: release.impact || '' }
+                ];
+            }
+
+            renderSectionsForm();
             document.getElementById('form-title').textContent = 'Editing Technical Release';
             switchView('form-view', false);
         }
@@ -602,13 +766,7 @@
             document.getElementById('category').value = 'Motors';
             document.getElementById('title').value = '';
             document.getElementById('effectiveDate').value = '';
-            document.getElementById('overview').value = '';
-            document.getElementById('details').value = '';
-            document.getElementById('impact').value = '';
-            document.getElementById('images').value = '';
-            document.getElementById('image-preview').innerHTML = '';
-            document.getElementById('generate-headings-button').classList.add('hidden');
-            imageFiles.length = 0;
+            initDefaultSections();
             await updateRefDisplay();
             if (switchToForm) switchView('form-view', false);
         }
