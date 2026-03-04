@@ -307,7 +307,8 @@
             button.disabled = true;
             try {
                 const prompt = `Rewrite and improve the following text for a professional technical release document. Enhance its clarity, grammar, and formal tone. Respond with only the improved text. Original text: "${originalText}"`;
-                const refinedText = await callGemini(prompt, 'gemini-2.0-flash');
+                // Updated to Gemini 3 Flash Preview
+                const refinedText = await callGemini(prompt, 'gemini-3-flash-preview');
                 textarea.value = refinedText.trim();
             } catch (error) {
                 alert(`Error refining text: ${error.message}`);
@@ -334,7 +335,8 @@
                     promptParts.push({ text: "\n" });
                 }
                 const schema = { type: "OBJECT", properties: { headings: { type: "ARRAY", items: { "type": "STRING" } } } };
-                const resultText = await callGemini(promptParts, 'gemini-2.0-flash', schema);
+                // Updated to Gemini 3 Flash Preview
+                const resultText = await callGemini(promptParts, 'gemini-3-flash-preview', schema);
                 const resultJson = JSON.parse(resultText);
                 if (resultJson.headings && resultJson.headings.length === imageFiles.length) {
                     resultJson.headings.forEach((heading, index) => {
@@ -361,7 +363,7 @@
         });
 
         async function callGemini(prompt, model, responseSchema = null) {
-            // Updated Generative Language API Key
+            // Your Generative Language API Key
             const apiKey = "AIzaSyA-2CrpAnIbqKSG_WkfV_lEWt__I3d2HUk"; 
             const payload = { contents: [{ role: "user", parts: Array.isArray(prompt) ? prompt : [{ text: prompt }] }] };
             if (responseSchema) payload.generationConfig = { responseMimeType: "application/json", responseSchema: responseSchema };
