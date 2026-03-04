@@ -198,7 +198,7 @@
         import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
 
         const firebaseConfig = {
-          apiKey: "AIzaSyCAnOF4XM_sYW1-s4iEM7i3JmiB7zFCSkw", // Original Firebase Key
+          apiKey: "AIzaSyCAnOF4XM_sYW1-s4iEM7i3JmiB7zFCSkw", // Public Identifier for Firebase
           authDomain: "tech-release-generator.firebaseapp.com",
           projectId: "tech-release-generator",
           storageBucket: "tech-release-generator.firebasestorage.app",
@@ -224,6 +224,9 @@
                 console.error("Initial app load failed.", e);
             }
         });
+
+        // Use the exact same proxy URL as OrderBot
+        const PROXY_API_URL = 'https://gemini-secure-proxy-51064902388.africa-south1.run.app';
 
         const imageFiles = []; 
         let allReleases = []; 
@@ -295,6 +298,38 @@
             if (files.length > 0) headingsButton.classList.remove('hidden');
         }
 
+        // Updated API Function to use Secure Proxy
+        async function callGemini(prompt, model, responseSchema = null) {
+            const geminiPayload = { 
+                contents: [{ role: "user", parts: Array.isArray(prompt) ? prompt : [{ text: prompt }] }] 
+            };
+            
+            if (responseSchema) {
+                geminiPayload.generationConfig = { responseMimeType: "application/json", responseSchema: responseSchema };
+            }
+
+            // Package the request exactly how the Cloud Run proxy expects it
+            const proxyPayload = {
+                model: model,
+                payload: geminiPayload
+            };
+
+            const response = await fetch(PROXY_API_URL, { 
+                method: 'POST', 
+                headers: { 'Content-Type': 'application/json' }, 
+                body: JSON.stringify(proxyPayload) 
+            });
+
+            if (!response.ok) {
+                let msg = `Request failed: ${response.status}`;
+                try { const data = await response.json(); if (data.error) msg = data.error.message; } catch (e) {}
+                throw new Error(msg);
+            }
+
+            const result = await response.json();
+            return result.candidates[0].content.parts[0].text;
+        }
+
         async function refineText(elementId) {
             const textarea = document.getElementById(elementId);
             const button = textarea.nextElementSibling;
@@ -307,7 +342,6 @@
             button.disabled = true;
             try {
                 const prompt = `Rewrite and improve the following text for a professional technical release document. Enhance its clarity, grammar, and formal tone. Respond with only the improved text. Original text: "${originalText}"`;
-                // Updated to Gemini 3 Flash Preview
                 const refinedText = await callGemini(prompt, 'gemini-3-flash-preview');
                 textarea.value = refinedText.trim();
             } catch (error) {
@@ -335,7 +369,6 @@
                     promptParts.push({ text: "\n" });
                 }
                 const schema = { type: "OBJECT", properties: { headings: { type: "ARRAY", items: { "type": "STRING" } } } };
-                // Updated to Gemini 3 Flash Preview
                 const resultText = await callGemini(promptParts, 'gemini-3-flash-preview', schema);
                 const resultJson = JSON.parse(resultText);
                 if (resultJson.headings && resultJson.headings.length === imageFiles.length) {
@@ -361,22 +394,6 @@
             reader.onload = () => resolve(reader.result);
             reader.onerror = error => reject(error);
         });
-
-        async function callGemini(prompt, model, responseSchema = null) {
-            // Your Generative Language API Key
-            const apiKey = "AIzaSyA-2CrpAnIbqKSG_WkfV_lEWt__I3d2HUk"; 
-            const payload = { contents: [{ role: "user", parts: Array.isArray(prompt) ? prompt : [{ text: prompt }] }] };
-            if (responseSchema) payload.generationConfig = { responseMimeType: "application/json", responseSchema: responseSchema };
-            const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
-            const response = await fetch(apiUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
-            if (!response.ok) {
-                let msg = `Request failed: ${response.status}`;
-                try { const data = await response.json(); if (data.error) msg = data.error.message; } catch (e) {}
-                throw new Error(msg);
-            }
-            const result = await response.json();
-            return result.candidates[0].content.parts[0].text;
-        }
 
         function generateDocument() {
             const refNumber = document.getElementById('ref-number-input').value;
