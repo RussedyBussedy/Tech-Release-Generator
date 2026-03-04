@@ -242,12 +242,10 @@
         }
 
         // Ensure the UI renders immediately. 
-        // Since this script is at the bottom of the body, the DOM is already parsed and ready.
         if (documentSections.length === 0) {
             initDefaultSections();
         }
 
-        // CORRECTED: Attach the listener to the 'window' object, exactly where the event is dispatched
         window.addEventListener('firebaseReady', async () => {
              try {
                 await window.loadHistory();
@@ -482,7 +480,7 @@
                 promptParts.push({ text: "\n" });
             });
 
-            // Re-render immediately to show loading state (complex in pure JS, let's just use alert/fallback if needed, or simple UI overlay)
+            // Re-render immediately to show loading state
             const block = document.querySelectorAll('.section-block')[index];
             const btn = block.querySelector('button.bg-emerald-100');
             const spinner = btn.querySelector('.spinner');
@@ -531,6 +529,7 @@
 
             documentSections.forEach(section => {
                 const secDiv = document.createElement('div');
+                // Ensure margin bottoms are consistent for the block slicer logic
                 secDiv.className = "mb-8";
                 
                 const titleHtml = `<h3 class="text-xl font-bold mb-3 text-gray-800 border-b-2 border-blue-200 pb-2">${section.title}</h3>`;
@@ -566,40 +565,76 @@
             switchView('document-view', false);
         }
         
-        // --- MULTI-PAGE PDF GENERATOR ---
+        // --- MULTI-PAGE PDF GENERATOR (ATOMIC BLOCK ALGORITHM) ---
         async function getPdfBlob() {
             const { jsPDF } = window.jspdf;
-            const content = document.getElementById('document-output');
             
             // Wait for images to load just in case
             await new Promise(resolve => setTimeout(resolve, 500));
 
-            const canvas = await html2canvas(content, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-            const imgData = canvas.toDataURL('image/jpeg', 0.95);
-            
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
+            const margin = 15; // 15mm margins for a professional look
+            const usableWidth = pdfWidth - (margin * 2);
+            const usableHeight = pdfHeight - (margin * 2);
             
-            // Image mapping ratios
-            const imgWidth = canvas.width;
-            const imgHeight = canvas.height;
-            const ratio = pdfWidth / imgWidth;
-            const scaledTotalHeight = imgHeight * ratio;
+            let currentY = margin;
 
-            let heightLeft = scaledTotalHeight;
-            let position = 0; // Vertical offset on the PDF page
+            // Grab the header and all dynamic sections individually
+            const header = document.querySelector('#document-output header');
+            const sectionsContainer = document.getElementById('output-sections-container');
+            const sections = Array.from(sectionsContainer.children);
+            
+            // This array holds every distinct "block" of content
+            const elementsToCapture = [header, ...sections];
 
-            // First page
-            pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, scaledTotalHeight);
-            heightLeft -= pdfHeight;
+            for (let i = 0; i < elementsToCapture.length; i++) {
+                const el = elementsToCapture[i];
+                if (!el) continue;
 
-            // Loop for additional pages, slicing the canvas image downwards
-            while (heightLeft > 0) {
-                position -= pdfHeight; // Shift the image up by exactly one PDF page height
-                pdf.addPage();
-                pdf.addImage(imgData, 'JPEG', 0, position, pdfWidth, scaledTotalHeight);
-                heightLeft -= pdfHeight;
+                // Capture the atomic block
+                const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+                const imgData = canvas.toDataURL('image/jpeg', 0.95);
+                
+                const imgWidthMm = usableWidth;
+                const ratio = usableWidth / canvas.width;
+                const imgHeightMm = canvas.height * ratio;
+
+                // 1. If this block pushes us off the page AND we aren't already at the very top, start a clean new page
+                if (currentY + imgHeightMm > pdfHeight - margin && currentY > margin) {
+                    pdf.addPage();
+                    currentY = margin;
+                }
+
+                // 2. Handle Massive Blocks: If a SINGLE block is literally taller than a whole page, we must slice it.
+                if (imgHeightMm > usableHeight) {
+                    let heightLeft = imgHeightMm;
+                    let sourceY = 0;
+
+                    while (heightLeft > 0) {
+                        if (sourceY > 0) {
+                            pdf.addPage();
+                            currentY = margin;
+                        }
+                        
+                        // Render with negative Y offset to "shift up" the image so the correct slice appears
+                        pdf.addImage(imgData, 'JPEG', margin, currentY - sourceY, imgWidthMm, imgHeightMm);
+                        
+                        heightLeft -= usableHeight;
+                        sourceY += usableHeight;
+                        
+                        if (heightLeft <= 0) {
+                            // Calculate where the bottom of this final slice ended up to set currentY for the next element
+                            const renderedHeightOnLastPage = imgHeightMm - (sourceY - usableHeight);
+                            currentY = margin + renderedHeightOnLastPage + 8; // +8mm gap
+                        }
+                    }
+                } else {
+                    // 3. Normal Blocks: Just paste them intact!
+                    pdf.addImage(imgData, 'JPEG', margin, currentY, imgWidthMm, imgHeightMm);
+                    currentY += imgHeightMm + 8; // 8mm gap between sections
+                }
             }
 
             return pdf.output('blob');
