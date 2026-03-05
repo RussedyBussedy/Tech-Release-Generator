@@ -53,6 +53,27 @@
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        
+        /* Drag handle styling */
+        .drag-handle {
+            cursor: grab;
+            color: #94a3b8;
+            padding: 0.5rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+        }
+        .drag-handle:hover {
+            color: #475569;
+        }
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+        .dragging {
+            opacity: 0.5;
+            border: 2px dashed #3b82f6 !important;
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -118,7 +139,10 @@
                     </div>
                 </div>
 
-                <div id="dynamic-sections-container" class="space-y-6">
+                <!-- ADDED: Drag and Drop Listeners -->
+                <div id="dynamic-sections-container" class="space-y-6" 
+                     ondragover="handleDragOver(event)" 
+                     ondrop="handleDrop(event)">
                     <!-- Sections generated via JS -->
                 </div>
 
@@ -280,6 +304,46 @@
 
         // --- DYNAMIC SECTION UI MANAGER ---
         
+        // State variable for drag and drop
+        let draggedItemIndex = null;
+
+        function handleDragStart(event, index) {
+            draggedItemIndex = index;
+            // Use setTimeout to allow the visual drag image to generate before changing opacity
+            setTimeout(() => event.target.classList.add('dragging'), 0);
+            // Required for Firefox
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', index);
+        }
+
+        function handleDragEnd(event) {
+            event.target.classList.remove('dragging');
+            draggedItemIndex = null;
+        }
+
+        function handleDragOver(event) {
+            event.preventDefault(); // Necessary to allow dropping
+            event.dataTransfer.dropEffect = 'move';
+        }
+
+        function handleDrop(event) {
+            event.preventDefault();
+            if (draggedItemIndex === null) return;
+
+            // Find the closest section-block that we dropped onto
+            const dropTarget = event.target.closest('.section-block');
+            if (!dropTarget) return;
+
+            const targetIndex = parseInt(dropTarget.dataset.index, 10);
+            
+            if (draggedItemIndex !== targetIndex) {
+                // Reorder the array
+                const itemToMove = documentSections.splice(draggedItemIndex, 1)[0];
+                documentSections.splice(targetIndex, 0, itemToMove);
+                renderSectionsForm();
+            }
+        }
+
         function addSection(type) {
             documentSections.push({
                 id: generateId(),
@@ -313,20 +377,30 @@
 
             documentSections.forEach((section, index) => {
                 const block = document.createElement('div');
-                block.className = 'section-block bg-white border border-gray-200 rounded-lg p-5 shadow-sm relative group';
+                // ADDED: Draggable attributes and datasets
+                block.className = 'section-block bg-white border border-gray-200 rounded-lg shadow-sm relative group flex';
+                block.draggable = true;
+                block.dataset.index = index;
+                block.ondragstart = (e) => handleDragStart(e, index);
+                block.ondragend = handleDragEnd;
                 
-                // Block Controls
+                // ADDED: Drag Handle HTML
+                const dragHandle = `
+                    <div class="drag-handle bg-gray-50 border-r border-gray-200 rounded-l-lg flex-shrink-0" title="Drag to reorder">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
+                    </div>
+                `;
+
+                // Block Controls (Removed Up/Down arrows)
                 const controls = `
-                    <div class="absolute right-4 top-4 flex items-center gap-1 opacity-50 group-hover:opacity-100 transition-opacity">
-                        <button onclick="moveSection(${index}, 'up')" class="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="Move Up">↑</button>
-                        <button onclick="moveSection(${index}, 'down')" class="p-1 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded" title="Move Down">↓</button>
-                        <button onclick="deleteSection(${index})" class="p-1 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded ml-2" title="Delete">✕</button>
+                    <div class="absolute right-4 top-4 flex items-center opacity-50 group-hover:opacity-100 transition-opacity z-10">
+                        <button onclick="deleteSection(${index})" class="p-1.5 bg-white text-gray-500 hover:text-red-600 hover:bg-red-50 rounded shadow-sm border border-gray-200" title="Delete Section">✕</button>
                     </div>
                 `;
 
                 // Title Input
                 const titleInput = `
-                    <div class="mb-4 pr-24">
+                    <div class="mb-4 pr-12">
                         <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Section Title</label>
                         <input type="text" value="${section.title}" oninput="documentSections[${index}].title = this.value" class="w-full text-lg font-bold px-0 py-1 border-0 border-b border-dashed border-gray-300 focus:ring-0 focus:border-blue-500 transition bg-transparent">
                     </div>
@@ -373,15 +447,26 @@
                     `;
                 }
 
-                block.innerHTML = controls + titleInput + bodyHtml;
+                // Wrap the content side
+                const contentWrapper = `
+                    <div class="flex-grow p-5 w-full">
+                        ${controls}
+                        ${titleInput}
+                        ${bodyHtml}
+                    </div>
+                `;
+
+                block.innerHTML = dragHandle + contentWrapper;
                 container.appendChild(block);
                 
-                // Drag drop listeners for specific section
+                // Drag drop listeners for specific section image zones
                 if (section.type === 'images') {
                     const dz = document.getElementById(`drop-zone-${section.id}`);
-                    dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
-                    dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
-                    dz.addEventListener('drop', (e) => { e.preventDefault(); dz.classList.remove('dragover'); handleSectionFiles(e.dataTransfer.files, index); });
+                    if (dz) {
+                        dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
+                        dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
+                        dz.addEventListener('drop', (e) => { e.preventDefault(); dz.classList.remove('dragover'); handleSectionFiles(e.dataTransfer.files, index); });
+                    }
                 }
             });
         }
@@ -548,10 +633,17 @@
                         `;
                     }
                 } else if (section.type === 'images' && section.images.length > 0) {
-                    const gridHtml = section.images.map(img => `
-                        <div>
+                    // ADDED: Visual indicator baked into the HTML so html2canvas captures it
+                    const gridHtml = section.images.map((img, i) => `
+                        <div class="relative">
                             <h4 class="text-sm font-semibold text-gray-700 mb-1 break-words">${img.heading || ''}</h4>
-                            <img src="${img.src}" class="w-full rounded-lg shadow-sm border" crossorigin="anonymous">
+                            <div class="relative rounded-lg overflow-hidden shadow-sm border border-gray-200">
+                                <!-- Data attribute helps the PDF generator find the original URL later -->
+                                <img src="${img.src}" data-section-id="${section.id}" data-image-index="${i}" class="pdf-interactive-image w-full h-auto" crossorigin="anonymous">
+                                <div class="absolute bottom-0 left-0 right-0 bg-black bg-opacity-60 text-white text-[10px] py-1 text-center font-semibold tracking-wider uppercase">
+                                    🔍 Click to Enlarge
+                                </div>
+                            </div>
                         </div>
                     `).join('');
                     secDiv.innerHTML = `${titleHtml}<div class="mt-4 grid grid-cols-2 gap-4">${gridHtml}</div>`;
@@ -575,25 +667,22 @@
             const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
             const pdfWidth = pdf.internal.pageSize.getWidth();
             const pdfHeight = pdf.internal.pageSize.getHeight();
-            const margin = 15; // 15mm margins for a professional look
+            const margin = 15; 
             const usableWidth = pdfWidth - (margin * 2);
             const usableHeight = pdfHeight - (margin * 2);
             
             let currentY = margin;
 
-            // Grab the header and all dynamic sections individually
             const header = document.querySelector('#document-output header');
             const sectionsContainer = document.getElementById('output-sections-container');
             const sections = Array.from(sectionsContainer.children);
             
-            // This array holds every distinct "block" of content
             const elementsToCapture = [header, ...sections];
 
             for (let i = 0; i < elementsToCapture.length; i++) {
                 const el = elementsToCapture[i];
                 if (!el) continue;
 
-                // Capture the atomic block
                 const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
                 const imgData = canvas.toDataURL('image/jpeg', 0.95);
                 
@@ -601,13 +690,13 @@
                 const ratio = usableWidth / canvas.width;
                 const imgHeightMm = canvas.height * ratio;
 
-                // 1. If this block pushes us off the page AND we aren't already at the very top, start a clean new page
+                // Page break logic
                 if (currentY + imgHeightMm > pdfHeight - margin && currentY > margin) {
                     pdf.addPage();
                     currentY = margin;
                 }
 
-                // 2. Handle Massive Blocks: If a SINGLE block is literally taller than a whole page, we must slice it.
+                // Handle Massive Blocks
                 if (imgHeightMm > usableHeight) {
                     let heightLeft = imgHeightMm;
                     let sourceY = 0;
@@ -618,22 +707,56 @@
                             currentY = margin;
                         }
                         
-                        // Render with negative Y offset to "shift up" the image so the correct slice appears
                         pdf.addImage(imgData, 'JPEG', margin, currentY - sourceY, imgWidthMm, imgHeightMm);
+                        
+                        // NEW: Find interactive images inside THIS specific sliced block
+                        // Sliced block logic is highly complex for linking, so we skip links on sliced blocks
+                        // to prevent coordinate mapping errors across page breaks.
                         
                         heightLeft -= usableHeight;
                         sourceY += usableHeight;
                         
                         if (heightLeft <= 0) {
-                            // Calculate where the bottom of this final slice ended up to set currentY for the next element
                             const renderedHeightOnLastPage = imgHeightMm - (sourceY - usableHeight);
-                            currentY = margin + renderedHeightOnLastPage + 8; // +8mm gap
+                            currentY = margin + renderedHeightOnLastPage + 8;
                         }
                     }
                 } else {
-                    // 3. Normal Blocks: Just paste them intact!
+                    // Normal Blocks
                     pdf.addImage(imgData, 'JPEG', margin, currentY, imgWidthMm, imgHeightMm);
-                    currentY += imgHeightMm + 8; // 8mm gap between sections
+                    
+                    // ADDED: Create invisible hyperlinks over the images in the PDF
+                    const interactiveImages = el.querySelectorAll('.pdf-interactive-image');
+                    
+                    interactiveImages.forEach(imgEl => {
+                        // Calculate where this specific image is relative to its parent container (el)
+                        const elRect = el.getBoundingClientRect();
+                        const imgRect = imgEl.getBoundingClientRect();
+                        
+                        // Convert pixel offsets to MM using the same ratio we used for the whole block
+                        const relativeYPixels = imgRect.top - elRect.top;
+                        const relativeXPixels = imgRect.left - elRect.left;
+                        
+                        const linkX = margin + (relativeXPixels * ratio);
+                        const linkY = currentY + (relativeYPixels * ratio);
+                        const linkWidth = imgRect.width * ratio;
+                        const linkHeight = imgRect.height * ratio;
+
+                        // Retrieve the stored URL
+                        const sectionId = imgEl.dataset.sectionId;
+                        const imageIndex = imgEl.dataset.imageIndex;
+                        const sectionData = documentSections.find(s => s.id === sectionId);
+                        
+                        if (sectionData && sectionData.images && sectionData.images[imageIndex]) {
+                            const targetUrl = sectionData.images[imageIndex].src;
+                            // Only add links to actual HTTP URLs, not base64 strings (which break PDFs)
+                            if (targetUrl && targetUrl.startsWith('http')) {
+                                pdf.link(linkX, linkY, linkWidth, linkHeight, { url: targetUrl });
+                            }
+                        }
+                    });
+
+                    currentY += imgHeightMm + 8; 
                 }
             }
 
@@ -675,7 +798,13 @@
         async function saveToFirebase() {
             const button = document.getElementById('firebase-save-button');
             const editingId = document.getElementById('editing-id').value;
+            const btnText = document.getElementById('firebase-save-text');
+            const spinner = document.getElementById('firebase-spinner');
+
             button.disabled = true;
+            spinner.classList.remove('hidden');
+            btnText.textContent = 'Processing Images...';
+
             try {
                 const userRefNumber = document.getElementById('output-ref').textContent;
                 if (!editingId && userRefNumber === suggestedRefNumber) {
@@ -687,7 +816,35 @@
                     });
                 }
                 
-                // Construct Data Object (Now saving the entire dynamic sections array)
+                // --- LIMIT FIX: Extract Base64 Images out of the DB Payload ---
+                // We create a deep copy of the sections so we can safely strip the heavy image data
+                const sectionsForDB = JSON.parse(JSON.stringify(documentSections));
+                
+                for (const section of sectionsForDB) {
+                    if (section.type === 'images' && section.images) {
+                        for (let i = 0; i < section.images.length; i++) {
+                            const imgObj = section.images[i];
+                            
+                            // If it's a newly uploaded base64 string, upload it to Storage instead!
+                            if (imgObj.src && imgObj.src.startsWith('data:image')) {
+                                const fetchRes = await fetch(imgObj.src);
+                                const imgBlob = await fetchRes.blob();
+                                
+                                const imgFileName = `releases/images/${userRefNumber}-${section.id}-${i}.jpg`;
+                                const imgStorageRef = window.firebase.ref(window.firebase.storage, imgFileName);
+                                
+                                await window.firebase.uploadBytes(imgStorageRef, imgBlob);
+                                // Replace the massive Base64 string with a tiny URL
+                                imgObj.src = await window.firebase.getDownloadURL(imgStorageRef);
+                                imgObj.storagePath = imgStorageRef.fullPath; 
+                            }
+                        }
+                    }
+                }
+                
+                btnText.textContent = 'Saving Document...';
+
+                // Construct Data Object (Now safely using URLs instead of Base64)
                 const releaseData = {
                     refNumber: userRefNumber,
                     title: document.getElementById('output-title').textContent,
@@ -695,7 +852,7 @@
                     category: document.getElementById('output-category').textContent,
                     releaseDate: document.getElementById('output-releaseDate').textContent,
                     effectiveDate: document.getElementById('output-effectiveDate').textContent,
-                    sections: documentSections, // Dynamic Payload
+                    sections: sectionsForDB, 
                     createdAt: window.firebase.serverTimestamp()
                 };
 
@@ -711,10 +868,19 @@
                 } else {
                     await window.firebase.addDoc(window.firebase.collection(window.firebase.db, "releases"), releaseData);
                 }
-                alert('Saved!');
+                
+                alert('Saved successfully!');
                 await window.loadHistory(); 
                 switchView('history-view'); 
-            } catch (error) { alert("Save Error: " + error.message); } finally { button.disabled = false; }
+                
+            } catch (error) { 
+                console.error(error);
+                alert("Save Error: " + error.message); 
+            } finally { 
+                button.disabled = false;
+                spinner.classList.add('hidden');
+                btnText.textContent = 'Save to Firebase'; 
+            }
         }
         
         window.loadHistory = async function() {
@@ -765,16 +931,13 @@
             document.getElementById('title').value = release.title || '';
             document.getElementById('effectiveDate').value = release.effectiveDate || '';
             
-            // Legacy mapping for old static structure vs new dynamic array
+            // Map the history state directly to the editor (URLs will safely reload)
             if (release.sections && Array.isArray(release.sections)) {
-                // Deep copy so we don't accidentally mutate the history state
                 documentSections = JSON.parse(JSON.stringify(release.sections));
             } else {
-                // Legacy Map
                 documentSections = [
                     { id: generateId(), type: 'text', title: 'Overview', content: release.overview || '' },
                     { id: generateId(), type: 'text', title: 'Details', content: release.details || '' },
-                    { id: generateId(), type: 'images', title: 'Legacy Images', images: [] }, // Can't easily retrieve old base64 strings
                     { id: generateId(), type: 'text', title: 'Impact and Action Required', content: release.impact || '' }
                 ];
             }
@@ -785,11 +948,34 @@
         }
 
         window.deleteRelease = async function(id, storagePath) {
-            if (!confirm('Permanently delete?')) return;
+            if (!confirm('Are you sure you want to permanently delete this release AND its associated images?')) return;
             try {
-                await window.firebase.deleteDoc(window.firebase.doc(window.firebase.db, "releases", id));
+                // Find all image files associated with this document and delete them
+                const docRef = window.firebase.doc(window.firebase.db, "releases", id);
+                const docSnap = await window.firebase.getDoc(docRef);
+                
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    if (data.sections) {
+                        for (const section of data.sections) {
+                            if (section.type === 'images' && section.images) {
+                                for (const img of section.images) {
+                                    if (img.storagePath) {
+                                        try {
+                                            await window.firebase.deleteObject(window.firebase.ref(window.firebase.storage, img.storagePath));
+                                        } catch(imgErr) { console.warn("Failed to delete associated image:", imgErr); }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Delete the main database entry and the PDF file
+                await window.firebase.deleteDoc(docRef);
                 if (storagePath) await window.firebase.deleteObject(window.firebase.ref(window.firebase.storage, storagePath));
-                alert('Deleted.');
+                
+                alert('Release deleted entirely.');
                 await loadHistory();
             } catch (error) { alert("Delete Error: " + error.message); }
         }
