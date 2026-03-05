@@ -208,7 +208,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, serverTimestamp, query, orderBy, runTransaction, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, getBlob } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
         const firebaseConfig = {
@@ -226,7 +226,7 @@
         const storage = getStorage(app);
         const auth = getAuth(app); 
 
-        window.firebase = { db, storage, auth, collection, addDoc, getDocs, ref, uploadBytes, getDownloadURL, deleteObject, doc, updateDoc, serverTimestamp, query, orderBy, runTransaction, getDoc, setDoc, deleteDoc };
+        window.firebase = { db, storage, auth, collection, addDoc, getDocs, ref, uploadBytes, getDownloadURL, deleteObject, doc, updateDoc, serverTimestamp, query, orderBy, runTransaction, getDoc, setDoc, deleteDoc, getBlob };
         
         signInAnonymously(auth).then(() => {
             console.log("Logged in to Firebase securely.");
@@ -616,7 +616,7 @@
             }
         }
 
-        // --- ASYNC PREVIEW DOCUMENT (Bypassing Firebase CORS Limits via AllOrigins Proxy) ---
+        // --- ASYNC PREVIEW DOCUMENT (Native Firebase Natively) ---
         async function generateDocument() {
             const btn = document.getElementById('generate-button');
             const btnText = document.getElementById('generate-btn-text');
@@ -627,28 +627,21 @@
             spinner.classList.remove('hidden');
 
             try {
-                // 1. PRE-PROCESS IMAGES: Overcome strict browser CORS by using a public proxy
-                // Since the Firebase bucket lacks a CORS policy, browser fetch/XHR fails even if authenticated.
-                // We bypass this by routing the public download URL through api.allorigins.win
+                // 1. PRE-PROCESS IMAGES: Since bucket CORS is fixed, we fetch directly from Firebase
                 for (const section of documentSections) {
                     if (section.type === 'images' && section.images) {
                         for (const img of section.images) {
-                            if (img.src.startsWith('http')) {
+                            if (img.src.startsWith('http') && img.storagePath) {
                                 // If we haven't already locally cached this image during this session
                                 if (!img.previewSrc) {
                                     try {
-                                        const proxyUrl = 'https://api.allorigins.win/raw?url=';
-                                        const fetchRes = await fetch(proxyUrl + encodeURIComponent(img.src));
-                                        
-                                        if (!fetchRes.ok) {
-                                            throw new Error(`Proxy returned status: ${fetchRes.status}`);
-                                        }
-                                        
-                                        const blob = await fetchRes.blob();
+                                        // Use native Firebase getBlob to fetch securely and directly
+                                        const imgRef = window.firebase.ref(window.firebase.storage, img.storagePath);
+                                        const blob = await window.firebase.getBlob(imgRef);
                                         img.previewSrc = await toBase64(blob);
                                     } catch (fetchErr) {
-                                        console.error("Failed to securely fetch image via proxy:", fetchErr);
-                                        // Fallback to direct src (may cause html2canvas tainting, but prevents hard crash)
+                                        console.error("Failed to securely fetch image directly from Firebase:", fetchErr);
+                                        // Fallback to direct src to prevent hard crash
                                         img.previewSrc = img.src;
                                     }
                                 }
