@@ -207,9 +207,8 @@
     <!-- Firebase SDKs -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        // ADDED getBlob to the imports to safely retrieve internal storage files, bypassing strict browser CORS limits
         import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, serverTimestamp, query, orderBy, runTransaction, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, getBlob } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
         const firebaseConfig = {
@@ -227,7 +226,7 @@
         const storage = getStorage(app);
         const auth = getAuth(app); 
 
-        window.firebase = { db, storage, auth, collection, addDoc, getDocs, ref, uploadBytes, getDownloadURL, deleteObject, getBlob, doc, updateDoc, serverTimestamp, query, orderBy, runTransaction, getDoc, setDoc, deleteDoc };
+        window.firebase = { db, storage, auth, collection, addDoc, getDocs, ref, uploadBytes, getDownloadURL, deleteObject, doc, updateDoc, serverTimestamp, query, orderBy, runTransaction, getDoc, setDoc, deleteDoc };
         
         signInAnonymously(auth).then(() => {
             console.log("Logged in to Firebase securely.");
@@ -617,7 +616,7 @@
             }
         }
 
-        // --- ASYNC PREVIEW DOCUMENT (Bypassing Firebase CORS Limits) ---
+        // --- ASYNC PREVIEW DOCUMENT (Bypassing Firebase CORS Limits via AllOrigins Proxy) ---
         async function generateDocument() {
             const btn = document.getElementById('generate-button');
             const btnText = document.getElementById('generate-btn-text');
@@ -628,20 +627,29 @@
             spinner.classList.remove('hidden');
 
             try {
-                // 1. PRE-PROCESS IMAGES: Overcome strict browser CORS by using Firebase authenticated blobs
+                // 1. PRE-PROCESS IMAGES: Overcome strict browser CORS by using a public proxy
+                // Since the Firebase bucket lacks a CORS policy, browser fetch/XHR fails even if authenticated.
+                // We bypass this by routing the public download URL through api.allorigins.win
                 for (const section of documentSections) {
                     if (section.type === 'images' && section.images) {
                         for (const img of section.images) {
-                            if (img.src.startsWith('http') && img.storagePath) {
-                                // If we haven't already locally cached this Firebase image during this session
+                            if (img.src.startsWith('http')) {
+                                // If we haven't already locally cached this image during this session
                                 if (!img.previewSrc) {
                                     try {
-                                        const imgRef = window.firebase.ref(window.firebase.storage, img.storagePath);
-                                        // getBlob() utilizes our anonymous login to safely bypass cross-origin restrictions
-                                        const blob = await window.firebase.getBlob(imgRef);
+                                        const proxyUrl = 'https://api.allorigins.win/raw?url=';
+                                        const fetchRes = await fetch(proxyUrl + encodeURIComponent(img.src));
+                                        
+                                        if (!fetchRes.ok) {
+                                            throw new Error(`Proxy returned status: ${fetchRes.status}`);
+                                        }
+                                        
+                                        const blob = await fetchRes.blob();
                                         img.previewSrc = await toBase64(blob);
                                     } catch (fetchErr) {
-                                        console.error("Failed to securely fetch image blob:", fetchErr);
+                                        console.error("Failed to securely fetch image via proxy:", fetchErr);
+                                        // Fallback to direct src (may cause html2canvas tainting, but prevents hard crash)
+                                        img.previewSrc = img.src;
                                     }
                                 }
                             }
@@ -694,7 +702,7 @@
                                 'large': 'col-span-6'  // 6/6 = Full width
                             };
                             const spanClass = sizeMap[img.size || 'medium'];
-                            // Prioritize the locally cached preview base64 to avoid Canvas tainting issues
+                            // Prioritize the locally cached proxy base64 to avoid Canvas tainting issues
                             const renderSrc = img.previewSrc || img.src;
 
                             return `
