@@ -3,1037 +3,1778 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Technical Release Generator</title>
+    <title>Blind Designs Financial Hub</title>
+    
+    <!-- Tailwind CSS for styling -->
     <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Chart.js for data visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    
+    <!-- Google Fonts for typography -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <!-- jsPDF and html2canvas for PDF generation -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+
     <style>
         body {
             font-family: 'Inter', sans-serif;
+            background-color: #f3f4f6;
         }
-        .spinner {
-            border: 2px solid #f3f3f3;
-            border-top: 2px solid #3b82f6;
+        .drop-zone {
+            transition: background-color 0.2s ease-in-out, border-color 0.2s ease-in-out;
+        }
+        .drop-zone--over {
+            background-color: #e0e7ff;
+            border-color: #4f46e5;
+        }
+        .loader {
+            border: 5px solid #f3f3f3;
+            border-top: 5px solid #4f46e5;
             border-radius: 50%;
-            width: 16px;
-            height: 16px;
+            width: 50px;
+            height: 50px;
             animation: spin 1s linear infinite;
-            display: inline-block;
         }
         @keyframes spin {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
-        #a4-container {
-            max-width: 210mm; 
+        .chart-container {
+            position: relative;
+            height: 350px;
+            width: 100%;
+        }
+        .detailed-chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 900px;
             margin-left: auto;
             margin-right: auto;
-            background: white; /* Ensure white background for slicing */
+            height: 800px;
         }
-        .tab-button.active {
-            border-bottom-color: #3b82f6;
-            color: #3b82f6;
+        .tab-btn {
+            transition: all 0.3s ease-in-out;
+            border-bottom-width: 2px;
+            border-color: transparent;
+            cursor: grab;
+        }
+        .tab-btn.dragging {
+            opacity: 0.5;
+            background: #e0e7ff;
+        }
+        .tab-btn.active {
+            border-color: #4f46e5; 
+            color: #4f46e5; 
             font-weight: 600;
         }
-        .drop-zone {
-            border: 2px dashed #cbd5e1;
-            transition: border-color 0.2s, background-color 0.2s;
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+
+        .kpi-progress-indicator::before {
+            content: ''; position: absolute; top: -4px; bottom: -4px; width: 3px; 
+            background-color: #4b5563; border-radius: 1.5px; z-index: 5; 
         }
-        .drop-zone.dragover {
-            border-color: #3b82f6;
-            background-color: #eff6ff;
+
+        /* Modal Overlay */
+        .modal-overlay {
+            background-color: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(2px);
         }
-        /* Dynamic Section Styling */
-        .section-block {
-            animation: fadeIn 0.3s ease-in-out;
+
+        /* Chatbot Styles */
+        #chatbot-container {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 1000;
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
-        }
-        
-        /* Drag handle styling */
-        .drag-handle {
-            cursor: grab;
-            color: #94a3b8;
-            padding: 0.5rem;
+        #chatbot-toggle {
+            background-color: #4f46e5;
+            color: white;
+            width: 60px;
+            height: 60px;
+            border-radius: 50%;
+            border: none;
+            cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
-            transition: color 0.2s;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transition: transform 0.2s;
         }
-        .drag-handle:hover {
-            color: #475569;
+        #chatbot-toggle:hover {
+            transform: scale(1.1);
         }
-        .drag-handle:active {
-            cursor: grabbing;
+        #chatbot-window {
+            position: absolute;
+            bottom: 80px;
+            right: 0;
+            width: 350px;
+            height: 450px;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.2);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            transform-origin: bottom right;
+            transition: transform 0.3s ease-out, opacity 0.3s ease-out;
         }
-        .dragging {
-            opacity: 0.5;
-            border: 2px dashed #3b82f6 !important;
+        #chat-messages {
+            flex-grow: 1;
+            padding: 15px;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        .chat-message {
+            padding: 8px 12px;
+            border-radius: 18px;
+            max-width: 80%;
+        }
+        .user-message {
+            background-color: #4f46e5;
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+        .bot-message {
+            background-color: #eef2ff;
+            color: #374151;
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+        #chat-input-container {
+            border-top: 1px solid #e5e7eb;
+            padding: 10px;
+            display: flex;
+        }
+        #chat-input {
+            flex-grow: 1;
+            border: 1px solid #d1d5db;
+            border-radius: 20px;
+            padding: 8px 15px;
+            outline: none;
+        }
+        #chat-send {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 0 10px;
+            color: #4f46e5;
         }
     </style>
 </head>
-<body class="bg-gray-100 text-gray-800">
+<body class="text-gray-800">
 
-    <div id="app-container" class="max-w-5xl mx-auto p-4 md:p-8">
-        <div class="mb-6 border-b border-gray-200">
-            <nav class="flex -mb-px space-x-6">
-                <button id="generator-tab-button" onclick="handleGeneratorTabClick()" class="tab-button py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors duration-200 ease-in-out active">
-                    Generator
+    <div class="container mx-auto p-4 md:p-8">
+        
+        <header class="flex justify-between items-end mb-8 border-b pb-4">
+            <div class="text-left">
+                <h1 class="text-4xl font-bold text-gray-900">Blind Designs Financial Hub</h1>
+                <p class="text-lg text-gray-600 mt-2">Live financial control & AI analysis.</p>
+            </div>
+            <button id="open-settings-btn" class="flex items-center text-gray-600 hover:text-indigo-600 font-medium">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                </svg>
+                Settings & Targets
+            </button>
+        </header>
+
+        <main id="app" class="space-y-8">
+
+            <section id="controls-section" class="flex justify-between items-center">
+                <div class="flex items-center space-x-2 bg-white p-1 rounded-lg shadow">
+                    <button id="view-ytd-btn" class="px-4 py-2 text-sm font-semibold rounded-md transition-colors">YTD</button>
+                    <button id="view-all-btn" class="px-4 py-2 text-sm font-semibold rounded-md transition-colors">All Time</button>
+                    <button id="view-compare-btn" class="px-4 py-2 text-sm font-semibold rounded-md transition-colors hover:bg-gray-100">Compare Years</button>
+                </div>
+                <div class="flex gap-4">
+                    <button id="add-data-button" class="bg-indigo-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-indigo-700 transition-colors duration-200">
+                        Add/Update Financials
+                    </button>
+                    <button id="clear-data-button" class="bg-red-600 text-white font-bold py-2 px-5 rounded-lg hover:bg-red-700 transition-colors duration-200">
+                        Clear All Data
+                    </button>
+                </div>
+            </section>
+            
+            <section id="upload-section" class="hidden bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-800">Upload Latest Financials</h2>
+                <div id="drop-zone" class="drop-zone mt-4 border-4 border-dashed border-gray-300 rounded-xl p-8 text-center cursor-pointer">
+                    <input type="file" id="file-input" multiple class="hidden">
+                    <svg class="mx-auto h-12 w-12 text-gray-400" stroke="currentColor" fill="none" viewBox="0 0 48 48" aria-hidden="true">
+                        <path d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <p class="mt-4 text-lg text-gray-600">
+                        <span class="font-semibold text-indigo-600">Click to upload</span> or drag and drop your PDFs here.
+                    </p>
+                    <p class="text-xs text-gray-500 mt-2">Upload Income Statement, Balance Sheet, Inventory Valuation and/or Shipments by Product reports.</p>
+                </div>
+                <div id="file-list" class="mt-4 text-sm text-gray-700"></div>
+                <button id="analyze-button" class="mt-6 w-full bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-indigo-700 disabled:bg-gray-400 transition-colors duration-200">
+                    Analyze & Update Dashboard
                 </button>
-                <button id="history-tab-button" onclick="switchView('history-view')" class="tab-button py-4 px-1 border-b-2 border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300 transition-colors duration-200 ease-in-out">
-                    History
-                </button>
-            </nav>
+            </section>
+
+            <section id="catalogue-section" class="hidden bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+                <h2 class="text-2xl font-semibold mb-4 text-gray-800">Stored Document Catalogue</h2>
+                <div id="catalogue-file-list" class="mt-4 text-sm text-gray-700 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <p>No documents stored yet.</p>
+                </div>
+            </section>
+
+            <section id="status-section" class="hidden text-center p-6 bg-white rounded-2xl shadow-lg border border-gray-200">
+                <div id="loader" class="loader mx-auto"></div>
+                <p id="status-text" class="mt-4 text-lg font-medium text-gray-700">Initializing...</p>
+            </section>
+            
+            <section id="error-section" class="hidden p-6 bg-red-50 text-red-700 rounded-2xl shadow-lg border border-red-200">
+                 <h2 class="text-2xl font-semibold mb-2 text-red-800">An Error Occurred</h2>
+                 <p id="error-text" class="whitespace-pre-line"></p>
+            </section>
+
+            <section id="dashboard-section" class="hidden space-y-8">
+                <!-- ... (Dashboard HTML) ... -->
+                <h2 id="dashboard-title" class="text-2xl font-semibold text-gray-800">Dashboard & Analysis</h2>
+
+                <section id="general-health-indicators">
+                    <h3 class="text-xl font-semibold text-gray-800 mb-4">Overall Health Status</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div id="current-month-health-card" class="bg-white p-6 rounded-xl shadow-lg border">
+                            <h4 class="text-lg font-semibold text-gray-700 mb-3">Latest Month Health (<span id="latest-month-label"></span>)</h4>
+                            <div class="flex items-center mb-3">
+                                <span id="current-month-health-indicator" class="w-8 h-8 rounded-full mr-4"></span>
+                                <p id="current-month-health-text" class="text-xl text-gray-800 font-semibold"></p>
+                            </div>
+                            <div class="text-xs space-y-1">
+                                <p class="text-gray-600">Profit vs Avg. Monthly Target: <span id="current-month-profit-status" class="font-medium"></span></p>
+                                <p class="text-gray-600">Profit Margin vs Target: <span id="current-month-margin-status" class="font-medium"></span></p>
+                                <p class="text-gray-600">Material Costs % of Sales vs Target: <span id="current-month-material-cost-status" class="font-medium"></span></p>
+                            </div>
+                        </div>
+                        <div id="ytd-health-card" class="bg-white p-6 rounded-xl shadow-lg border">
+                            <h4 class="text-lg font-semibold text-gray-700 mb-3">Financial YTD Health</h4>
+                            <div class="flex items-center mb-3">
+                                <span id="ytd-health-indicator" class="w-8 h-8 rounded-full mr-4"></span>
+                                <p id="ytd-health-text" class="text-xl text-gray-800 font-semibold"></p>
+                            </div>
+                             <div class="text-xs space-y-1">
+                                <p class="text-gray-600">YTD Profit Margin: <span id="ytd-margin-status" class="font-medium"></span></p>
+                                <p class="text-gray-600">YTD Material Costs % of Sales: <span id="ytd-material-cost-status" class="font-medium"></span></p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200 flex flex-col justify-between">
+                        <div>
+                            <h3 id="kpi-profit-title" class="text-base font-medium text-gray-500">Progress to Annual Target</h3>
+                            <p id="kpi-ytd-profit" class="text-2xl lg:text-3xl font-semibold text-gray-900 mt-2 break-words">R0.00</p>
+                        </div>
+                        <div id="kpi-profit-progress-container" class="mt-4">
+                            <div class="flex justify-between text-sm text-gray-600 mb-1"><span>Progress</span><span id="progress-percentage" class="font-semibold text-indigo-600">0%</span></div>
+                            <div class="w-full bg-gray-200 rounded-full h-3 relative"><div id="progress-bar" class="bg-indigo-600 h-3 rounded-full" style="width: 0%"></div></div>
+                            <p class="text-xs text-right text-gray-500 mt-1">Target: <span id="kpi-target-profit">R0.00</span></p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200 flex flex-col justify-between">
+                        <div>
+                             <h3 id="kpi-margin-title" class="text-base font-medium text-gray-500">YTD Profit Margin</h3>
+                            <p id="kpi-ytd-margin" class="text-3xl font-semibold text-gray-900 mt-2">0.00%</p>
+                        </div>
+                         <div class="mt-4">
+                            <div class="flex justify-between text-sm text-gray-600 mb-1"><span>Performance</span><span id="margin-indicator" class="font-semibold"></span></div>
+                             <div class="w-full bg-gray-200 rounded-full h-3 relative"><div id="margin-bar" class="h-3 rounded-full" style="width: 0%"></div><div id="margin-target-line" class="kpi-progress-indicator" style="left: 0%;"></div></div>
+                            <p class="text-xs text-right text-gray-500 mt-1">Target: <span id="kpi-margin-target">0.00%</span> (vertical line)</p>
+                        </div>
+                    </div>
+                     <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200 flex flex-col justify-between">
+                        <div>
+                            <h3 id="kpi-material-cost-title" class="text-base font-medium text-gray-500">YTD Material Costs %</h3>
+                            <p id="kpi-material-cost-percentage" class="text-3xl font-semibold text-gray-900 mt-2">0.00%</p>
+                        </div>
+                        <div class="mt-4">
+                            <div class="flex justify-between text-sm text-gray-600 mb-1"><span>Performance</span><span id="material-cost-indicator" class="font-semibold"></span></div>
+                             <div class="w-full bg-gray-200 rounded-full h-3 relative"><div id="material-cost-bar" class="h-3 rounded-full" style="width: 0%"></div><div id="material-cost-target-line" class="kpi-progress-indicator" style="left: 0%;"></div></div>
+                            <p class="text-xs text-right text-gray-500 mt-1">Target: <span id="kpi-material-cost-target">0.00%</span> (vertical line)</p>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+                        <h3 class="text-base font-medium text-gray-500">Projected Annual Profit</h3>
+                        <p id="kpi-projected-profit" class="text-2xl lg:text-3xl font-semibold text-gray-900 mt-2 break-words">R0.00</p>
+                        <hr class="my-4 border-gray-200">
+                        <h3 class="text-base font-medium text-gray-500">Current Ratio</h3>
+                        <p id="kpi-current-ratio" class="text-3xl font-semibold text-gray-900 mt-1">0.00</p>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                    <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+                        <h3 id="chart-title-left" class="text-xl font-semibold mb-4 text-gray-800">Monthly Net Profit Trend</h3>
+                        <div class="chart-container">
+                            <canvas id="netProfitChart"></canvas>
+                        </div>
+                    </div>
+                    <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+                         <h3 id="chart-title-right" class="text-xl font-semibold mb-4 text-gray-800">Monthly Revenue vs. Costs</h3>
+                        <div class="chart-container">
+                            <canvas id="revenueVsCostChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="bg-white p-6 rounded-2xl shadow-lg border border-gray-200">
+                    <h3 class="text-xl font-semibold text-gray-800">AI Analysis and suggestions</h3>
+                    <div id="ai-analysis" class="mt-4 prose prose-indigo max-w-none text-gray-700 whitespace-pre-line">
+                        <p>Analysis will appear here...</p>
+                    </div>
+                </div>
+
+                <section id="analysis-section" class="bg-white p-4 sm:p-6 rounded-xl shadow-lg border border-gray-200">
+                    <div class="border-b border-gray-300">
+                        <nav id="tabs" class="-mb-px flex space-x-1 sm:space-x-4 overflow-x-auto pb-px" aria-label="Tabs">
+                            <button draggable="true" data-target="product_performance" class="tab-btn whitespace-nowrap py-3 px-2 sm:px-4 font-medium text-sm text-gray-500 hover:text-indigo-600 active">Product Performance</button>
+                            <button draggable="true" data-target="inventory_performance" class="tab-btn whitespace-nowrap py-3 px-2 sm:px-4 font-medium text-sm text-gray-500 hover:text-indigo-600">Inventory Performance</button>
+                            <button draggable="true" data-target="cost_structure" class="tab-btn whitespace-nowrap py-3 px-2 sm:px-4 font-medium text-sm text-gray-500 hover:text-indigo-600">Overall Costs</button>
+                            <button draggable="true" data-target="detailed_cos" class="tab-btn whitespace-nowrap py-3 px-2 sm:px-4 font-medium text-sm text-gray-500 hover:text-indigo-600">Cost of Sales Details</button>
+                            <button draggable="true" data-target="detailed_opex" class="tab-btn whitespace-nowrap py-3 px-2 sm:px-4 font-medium text-sm text-gray-500 hover:text-indigo-600">Other Expenses Details</button>
+                        </nav>
+                    </div>
+                    <div id="tab-content-container" class="pt-6">
+                        <div id="content-product_performance" class="tab-content active">
+                             <div class="flex flex-col md:flex-row gap-4 items-center mb-6">
+                                <div class="flex-grow w-full md:w-auto">
+                                    <label for="product-select" class="block text-sm font-medium text-gray-700">Underperforming Products</label>
+                                    <select id="product-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"></select>
+                                </div>
+                            </div>
+                            <div id="product-chart-container" class="chart-container hidden">
+                                <canvas id="productTrendChart"></canvas>
+                            </div>
+                            <div id="product-ai-insights-container" class="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg prose prose-sm max-w-none hidden"></div>
+                        </div>
+                        <div id="content-inventory_performance" class="tab-content">
+                            <div id="inventory-ai-insights-container" class="mt-4 p-4 bg-indigo-50 border border-indigo-200 rounded-lg prose prose-sm max-w-none hidden"></div>
+                            <div class="flex flex-col md:flex-row gap-4 items-center mb-6">
+                                <div class="flex-grow w-full md:w-auto">
+                                    <label for="inventory-select" class="block text-sm font-medium text-gray-700">Select a Product</label>
+                                    <select id="inventory-select" class="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm rounded-md"></select>
+                                </div>
+                            </div>
+                            <div id="inventory-chart-container" class="chart-container hidden">
+                                <canvas id="inventoryTrendChart"></canvas>
+                            </div>
+                        </div>
+                        <div id="content-cost_structure" class="tab-content">
+                            <h3 class="text-xl font-semibold mb-1 text-gray-800">YTD Overall Cost Structure</h3>
+                            <p class="text-gray-600 mb-6 text-sm">High-level breakdown of Year-to-Date total costs.</p>
+                             <div class="chart-container" style="max-width: 450px; height: 350px; margin: auto;"><canvas id="overallCostStructureChart"></canvas></div>
+                        </div>
+                        <div id="content-detailed_cos" class="tab-content">
+                            <h3 class="text-xl font-semibold mb-1 text-gray-800">YTD Detailed Cost of Sales Breakdown</h3>
+                            <p class="text-gray-600 mb-6 text-sm">Granular view of the "Cost of Sales" category.</p>
+                             <div class="detailed-chart-container"><canvas id="detailedCostOfSalesChart"></canvas></div>
+                        </div>
+                        <div id="content-detailed_opex" class="tab-content">
+                            <h3 class="text-xl font-semibold mb-1 text-gray-800">YTD Detailed Other Expenses Breakdown</h3>
+                            <p class="text-gray-600 mb-6 text-sm">Granular view of the "Other Expenses" category.</p>
+                             <div class="detailed-chart-container"><canvas id="detailedOtherExpensesChart"></canvas></div>
+                        </div>
+                    </div>
+                </section>
+
+            </section>
+        </main>
+        
+        <footer class="text-center mt-12 py-4 border-t border-gray-300">
+            <p class="text-sm text-gray-500">Powered by Gemini & Firebase</p>
+        </footer>
+
+        <!-- Settings Modal -->
+        <div id="settings-modal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-lg sm:w-full">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <h3 class="text-lg leading-6 font-medium text-gray-900" id="modal-title">Financial Targets & Settings</h3>
+                        <div class="mt-4 space-y-4">
+                            <div>
+                                <label for="setting-annual-profit" class="block text-sm font-medium text-gray-700">Annual Net Profit Target (R)</label>
+                                <input type="number" id="setting-annual-profit" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2 border" placeholder="e.g. 25000000">
+                            </div>
+                            <div>
+                                <label for="setting-profit-margin" class="block text-sm font-medium text-gray-700">Net Profit Margin Target (%)</label>
+                                <input type="number" id="setting-profit-margin" step="0.01" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2 border" placeholder="e.g. 10.5">
+                            </div>
+                            <div>
+                                <label for="setting-material-cost" class="block text-sm font-medium text-gray-700">Material Cost Max Percentage (%)</label>
+                                <input type="number" id="setting-material-cost" step="0.01" class="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm p-2 border" placeholder="e.g. 53.0">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button type="button" id="save-settings-btn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-indigo-600 text-base font-medium text-white hover:bg-indigo-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+                            Save Changes
+                        </button>
+                        <button type="button" id="close-settings-btn" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                            Cancel
+                        </button>
+                    </div>
+                </div>
+            </div>
         </div>
 
-        <!-- FORM VIEW -->
-        <div id="form-view">
-            <div class="bg-white p-8 rounded-xl shadow-lg">
-                <input type="hidden" id="editing-id">
-                <div class="flex justify-between items-center mb-8">
-                    <div>
-                        <h1 id="form-title" class="text-3xl font-bold text-gray-900">Technical Release Generator</h1>
-                        <p class="text-gray-600">Structure your document using the block manager below.</p>
+        <!-- Staging/Review Modal -->
+        <div id="staging-modal" class="fixed inset-0 z-50 hidden overflow-y-auto" aria-labelledby="modal-title" role="dialog" aria-modal="true">
+            <div class="flex items-end justify-center min-h-screen pt-4 px-4 pb-20 text-center sm:block sm:p-0">
+                <div class="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" aria-hidden="true"></div>
+                <span class="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">&#8203;</span>
+                <div class="inline-block align-bottom bg-white rounded-lg text-left overflow-hidden shadow-xl transform transition-all sm:my-8 sm:align-middle sm:max-w-4xl sm:w-full">
+                    <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
+                        <div class="sm:flex sm:items-start">
+                            <div class="mx-auto flex-shrink-0 flex items-center justify-center h-12 w-12 rounded-full bg-indigo-100 sm:mx-0 sm:h-10 sm:w-10">
+                                <svg class="h-6 w-6 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                            </div>
+                            <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left w-full">
+                                <h3 class="text-lg leading-6 font-medium text-gray-900">Review Extracted Data</h3>
+                                <div class="mt-2">
+                                    <p class="text-sm text-gray-500 mb-4">The AI has analyzed your documents. Please review the extracted figures for the latest month found. You can edit these fields before saving.</p>
+                                    
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 bg-gray-50 p-4 rounded-lg border border-gray-200">
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-500 uppercase">Month Detected</label>
+                                            <input type="text" id="review-month" class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm p-1 font-semibold text-gray-800">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-500 uppercase">Revenue</label>
+                                            <input type="number" step="0.01" id="review-revenue" class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm p-1">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-500 uppercase">Cost of Sales</label>
+                                            <input type="number" step="0.01" id="review-cos" class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm p-1">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-500 uppercase">Other Expenses</label>
+                                            <input type="number" step="0.01" id="review-opex" class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm p-1">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-500 uppercase">Net Profit</label>
+                                            <input type="number" step="0.01" id="review-profit" class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm p-1">
+                                        </div>
+                                        <div>
+                                            <label class="block text-xs font-medium text-gray-500 uppercase">Material Costs</label>
+                                            <input type="number" step="0.01" id="review-material" class="mt-1 block w-full border-gray-300 rounded shadow-sm text-sm p-1">
+                                        </div>
+                                    </div>
+                                    <p class="text-xs text-gray-400 mt-2 italic">* Detailed breakdowns and product data will also be saved but are hidden for brevity.</p>
+                                </div>
+                            </div>
+                        </div>
                     </div>
-                    <div class="text-right">
-                        <label for="ref-number-input" class="block text-sm font-medium text-gray-700 text-right">Reference Number</label>
-                        <input type="text" id="ref-number-input" class="w-48 mt-1 px-3 py-2 border border-gray-300 rounded-lg text-right font-bold text-blue-600 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Loading...">
+                    <div class="bg-gray-50 px-4 py-3 sm:px-6 sm:flex sm:flex-row-reverse">
+                        <button type="button" id="commit-data-btn" class="w-full inline-flex justify-center rounded-md border border-transparent shadow-sm px-4 py-2 bg-green-600 text-base font-medium text-white hover:bg-green-700 focus:outline-none sm:ml-3 sm:w-auto sm:text-sm">
+                            Commit to Dashboard
+                        </button>
+                        <button type="button" id="cancel-stage-btn" class="mt-3 w-full inline-flex justify-center rounded-md border border-gray-300 shadow-sm px-4 py-2 bg-white text-base font-medium text-red-700 hover:bg-red-50 focus:outline-none sm:mt-0 sm:ml-3 sm:w-auto sm:text-sm">
+                            Discard Analysis
+                        </button>
                     </div>
                 </div>
+            </div>
+        </div>
 
-                <!-- Global Header Data -->
-                <div class="space-y-6 mb-8 pb-8 border-b border-gray-200">
-                    <h3 class="text-lg font-bold text-gray-800">Document Header Info</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div>
-                            <label for="productsAffected" class="block text-sm font-medium text-gray-700 mb-1">Products Affected</label>
-                            <input type="text" id="productsAffected" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g., Alpha Motors">
-                        </div>
-                        <div>
-                            <label for="category" class="block text-sm font-medium text-gray-700 mb-1">Release Category</label>
-                            <select id="category" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                                <option>Motors</option> <option>Fabrics</option> <option>Hardware</option> <option>Software</option> <option>Installation Procedure</option> <option>Other</option>
-                            </select>
-                        </div>
-                        <div class="md:col-span-2">
-                            <label for="title" class="block text-sm font-medium text-gray-700 mb-1">Title</label>
-                            <input type="text" id="title" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="e.g., Somfy Zigbee Motors">
-                        </div>
-                        <div>
-                            <label for="effectiveDate" class="block text-sm font-medium text-gray-700 mb-1">Effective Date</label>
-                            <input type="date" id="effectiveDate" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition">
-                        </div>
-                    </div>
+        <!-- Chatbot UI -->
+        <div id="chatbot-container">
+            <div id="chatbot-window" class="hidden scale-0 opacity-0">
+                <div class="p-4 bg-indigo-600 text-white font-semibold">Financial Assistant</div>
+                <div id="chat-messages">
+                    <div class="chat-message bot-message">Hello! How can I help you analyze the financial data?</div>
                 </div>
-
-                <!-- Dynamic Sections Container -->
-                <div class="mb-4 flex items-center justify-between">
-                    <h3 class="text-lg font-bold text-gray-800">Page Content Blocks</h3>
-                    <div class="flex gap-2">
-                        <button onclick="addSection('text')" class="px-3 py-1.5 bg-indigo-100 text-indigo-700 font-semibold rounded hover:bg-indigo-200 transition text-sm flex items-center gap-1">+ Text Block</button>
-                        <button onclick="addSection('images')" class="px-3 py-1.5 bg-emerald-100 text-emerald-700 font-semibold rounded hover:bg-emerald-200 transition text-sm flex items-center gap-1">+ Image Gallery</button>
-                    </div>
-                </div>
-
-                <div id="dynamic-sections-container" class="space-y-6" 
-                     ondragover="handleDragOver(event)" 
-                     ondrop="handleDrop(event)">
-                    <!-- Sections generated via JS -->
-                </div>
-
-                <div class="mt-10">
-                    <button id="generate-button" onclick="generateDocument()" class="w-full bg-blue-600 text-white font-bold py-4 px-6 rounded-lg hover:bg-blue-700 focus:outline-none focus:ring-4 focus:ring-blue-300 transition-all duration-300 transform hover:scale-[1.01] shadow-md flex justify-center items-center gap-2">
-                        <span id="generate-btn-text">Preview Document</span>
-                        <span id="generate-spinner" class="spinner hidden" style="border-top-color: white;"></span>
+                <div id="chat-input-container">
+                    <input type="text" id="chat-input" placeholder="Ask a question...">
+                    <button id="chat-send">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" /></svg>
                     </button>
                 </div>
             </div>
-        </div>
-
-        <!-- HISTORY VIEW -->
-        <div id="history-view" class="hidden">
-            <div class="bg-white p-8 rounded-xl shadow-lg">
-                <h1 class="text-3xl font-bold text-gray-900 mb-6">Release History</h1>
-                <div class="mb-6">
-                    <input type="text" id="search-input" onkeyup="searchReleases()" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Search by title, ref no, product, or any keyword...">
-                </div>
-                <div id="history-results" class="space-y-4">
-                    <p class="text-gray-500">Loading history...</p>
-                </div>
-            </div>
-        </div>
-
-        <!-- DOCUMENT OUTPUT VIEW -->
-        <div id="document-view" class="hidden">
-             <div class="flex justify-end gap-2 mb-4">
-                <button onclick="startNewRelease()" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition">Start New Release</button>
-                <button onclick="switchView('form-view')" class="bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition">Back to Editor</button>
-                <button id="pdf-download-button" onclick="downloadPDF()" class="bg-green-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-green-700 transition flex items-center gap-2">
-                    <span id="pdf-download-text">Download Multi-Page PDF</span>
-                    <span id="pdf-download-spinner" class="spinner hidden" style="border-top-color: white;"></span>
-                </button>
-                <button id="firebase-save-button" onclick="saveToFirebase()" class="bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
-                    <span id="firebase-save-text">Save to Firebase</span>
-                    <span id="firebase-spinner" class="spinner hidden" style="border-top-color: white;"></span>
-                </button>
-            </div>
-            <div id="a4-container">
-                <div id="document-output" class="bg-white p-8 md:p-12 rounded-xl shadow-lg border border-gray-200">
-                     <header class="border-b pb-6 mb-8">
-                        <h1 class="text-xl font-bold text-gray-800">Blind Designs Technical Release</h1>
-                        <h2 id="output-title" class="text-3xl md:text-4xl font-bold text-gray-900 mt-4 break-words"></h2>
-                        <div class="mt-6 grid grid-cols-3 gap-4 text-sm">
-                            <div class="bg-gray-50 p-3 rounded-lg"><p class="font-semibold text-gray-600">Reference No.</p><p id="output-ref" class="text-gray-900 font-medium"></p></div>
-                            <div class="bg-gray-50 p-3 rounded-lg"><p class="font-semibold text-gray-600">Release Date</p><p id="output-releaseDate" class="text-gray-900 font-medium"></p></div>
-                            <div class="bg-gray-50 p-3 rounded-lg"><p class="font-semibold text-gray-600">Effective Date</p><p id="output-effectiveDate" class="text-gray-900 font-medium"></p></div>
-                            <div class="bg-gray-50 p-3 rounded-lg"><p class="font-semibold text-gray-600">Category</p><p id="output-category" class="text-gray-900 font-medium"></p></div>
-                            <div class="bg-gray-50 p-3 rounded-lg col-span-2"><p class="font-semibold text-gray-600">Products Affected</p><p id="output-products" class="text-gray-900 font-medium break-words"></p></div>
-                        </div>
-                    </header>
-                    
-                    <!-- Dynamic Sections Output -->
-                    <main id="output-sections-container" class="space-y-8">
-                        <!-- Filled via JS -->
-                    </main>
-                </div>
-            </div>
+            <button id="chatbot-toggle">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" /></svg>
+            </button>
         </div>
     </div>
 
-    <!-- Firebase SDKs -->
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getFirestore, collection, addDoc, getDocs, doc, updateDoc, serverTimestamp, query, orderBy, runTransaction, getDoc, setDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-        import { getStorage, ref, uploadBytes, getDownloadURL, deleteObject, getBlob } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-storage.js";
-        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, getDoc, onSnapshot, deleteDoc, collection, addDoc, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, deleteObject } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 
-        const firebaseConfig = {
-          apiKey: "AIzaSyCAnOF4XM_sYW1-s4iEM7i3JmiB7zFCSkw", 
-          authDomain: "tech-release-generator.firebaseapp.com",
-          projectId: "tech-release-generator",
-          storageBucket: "tech-release-generator.firebasestorage.app",
-          messagingSenderId: "436027193031",
-          appId: "1:436027193031:web:b4235e2f0e8ce025c730e2",
-          measurementId: "G-2D5WVYH83J"
-        };
-
-        const app = initializeApp(firebaseConfig);
-        const db = getFirestore(app);
-        const storage = getStorage(app);
-        const auth = getAuth(app); 
-
-        window.firebase = { db, storage, auth, collection, addDoc, getDocs, ref, uploadBytes, getDownloadURL, deleteObject, doc, updateDoc, serverTimestamp, query, orderBy, runTransaction, getDoc, setDoc, deleteDoc, getBlob };
-        
-        signInAnonymously(auth).then(() => {
-            console.log("Logged in to Firebase securely.");
-            window.dispatchEvent(new CustomEvent('firebaseReady'));
-        }).catch((error) => {
-            console.error("Firebase Auth Error:", error);
-            if (error.code === 'auth/configuration-not-found' || error.code === 'auth/operation-not-allowed') {
-                 alert("Firebase Authentication is not enabled for this project.\n\nPlease go to your Firebase Console -> Build -> Authentication -> Get Started.\nThen go to 'Sign-in method' and enable the 'Anonymous' provider so you can save PDFs to Storage.");
-            }
-            window.dispatchEvent(new CustomEvent('firebaseReady'));
-        });
-    </script>
-    
-    <script>
-        // Use the exact same proxy URL as OrderBot
+        // --- GLOBAL PROXY URL ---
         const PROXY_API_URL = 'https://gemini-secure-proxy-51064902388.africa-south1.run.app';
 
-        let allReleases = []; 
-        let suggestedRefNumber = '';
+        // --- DOM ELEMENT REFERENCES ---
+        const dropZone = document.getElementById('drop-zone');
+        const fileInput = document.getElementById('file-input');
+        const fileList = document.getElementById('file-list');
+        const analyzeButton = document.getElementById('analyze-button');
+        const statusSection = document.getElementById('status-section');
+        const loader = document.getElementById('loader');
+        const statusText = document.getElementById('status-text');
+        const dashboardSection = document.getElementById('dashboard-section');
+        const errorSection = document.getElementById('error-section');
+        const errorText = document.getElementById('error-text');
+        const addDataButton = document.getElementById('add-data-button');
+        const clearDataButton = document.getElementById('clear-data-button');
+        const uploadSection = document.getElementById('upload-section');
+        const tabsContainer = document.getElementById('tabs');
+        const tabContentContainer = document.getElementById('tab-content-container');
+        const viewYtdBtn = document.getElementById('view-ytd-btn');
+        const viewAllBtn = document.getElementById('view-all-btn');
+        const viewCompareBtn = document.getElementById('view-compare-btn');
+        const dashboardTitle = document.getElementById('dashboard-title');
+        const chatbotToggle = document.getElementById('chatbot-toggle');
+        const chatbotWindow = document.getElementById('chatbot-window');
+        const chatMessages = document.getElementById('chat-messages');
+        const chatInput = document.getElementById('chat-input');
+        const chatSend = document.getElementById('chat-send');
+        const productSelect = document.getElementById('product-select');
+        const productChartContainer = document.getElementById('product-chart-container');
+        const productAiInsightsContainer = document.getElementById('product-ai-insights-container');
+        const inventorySelect = document.getElementById('inventory-select');
+        const inventoryChartContainer = document.getElementById('inventory-chart-container');
+        const inventoryAiInsightsContainer = document.getElementById('inventory-ai-insights-container');
+        const catalogueSection = document.getElementById('catalogue-section');
+        const catalogueFileList = document.getElementById('catalogue-file-list');
+        const chartTitleLeft = document.getElementById('chart-title-left');
+        const chartTitleRight = document.getElementById('chart-title-right');
         
-        // Dynamic Blocks State
-        let documentSections = [];
+        // Settings Modal Refs
+        const openSettingsBtn = document.getElementById('open-settings-btn');
+        const settingsModal = document.getElementById('settings-modal');
+        const closeSettingsBtn = document.getElementById('close-settings-btn');
+        const saveSettingsBtn = document.getElementById('save-settings-btn');
+        const inputAnnualProfit = document.getElementById('setting-annual-profit');
+        const inputProfitMargin = document.getElementById('setting-profit-margin');
+        const inputMaterialCost = document.getElementById('setting-material-cost');
 
-        function generateId() {
-            return 'sec_' + Math.random().toString(36).substr(2, 9);
-        }
+        // Staging Modal Refs
+        const stagingModal = document.getElementById('staging-modal');
+        const commitDataBtn = document.getElementById('commit-data-btn');
+        const cancelStageBtn = document.getElementById('cancel-stage-btn');
+        const reviewMonth = document.getElementById('review-month');
+        const reviewRevenue = document.getElementById('review-revenue');
+        const reviewCos = document.getElementById('review-cos');
+        const reviewOpex = document.getElementById('review-opex');
+        const reviewProfit = document.getElementById('review-profit');
+        const reviewMaterial = document.getElementById('review-material');
 
-        // Initialize default layout
-        function initDefaultSections() {
-            documentSections = [
-                { id: generateId(), type: 'text', title: 'Overview', content: '' },
-                { id: generateId(), type: 'text', title: 'Details', content: '' },
-                { id: generateId(), type: 'images', title: 'Images', images: [] },
-                { id: generateId(), type: 'text', title: 'Impact and Action Required', content: '' }
-            ];
-            renderSectionsForm();
-        }
-
-        // Ensure the UI renders immediately. 
-        if (documentSections.length === 0) {
-            initDefaultSections();
-        }
-
-        window.addEventListener('firebaseReady', async () => {
-             try {
-                await window.loadHistory();
-                await window.updateRefDisplay();
-            } catch (e) {
-                console.error("Initial app load failed.", e);
-            }
-        });
-
-        async function getNextRefNumber() {
-            const counterRef = window.firebase.doc(window.firebase.db, "_config", "releaseCounter");
-            try {
-                const counterSnap = await window.firebase.getDoc(counterRef);
-                let currentCounter = 1;
-                if (counterSnap.exists()) {
-                    currentCounter = counterSnap.data().value;
-                } else {
-                    await window.firebase.setDoc(counterRef, { value: 1 });
-                }
-                const year = new Date().getFullYear();
-                return `TR-${year}-${currentCounter.toString().padStart(3, '0')}`;
-            } catch (error) {
-                console.error("Could not fetch the next reference number:", error);
-                return "TR-ERROR-1";
-            }
-        }
+        // --- STATE MANAGEMENT ---
+        let uploadedFiles = [];
+        let db, auth, storage;
+        let chartInstances = {};
+        let currentData = null;
+        let stagedAnalysisData = null; // Holds data pending review
+        let currentViewMode = 'ytd';
+        let fileCatalogue = [];
+        let unsubscribeDashboard = null;
+        let unsubscribeCatalogue = null;
         
-        window.updateRefDisplay = async function() {
-             suggestedRefNumber = await getNextRefNumber();
-             document.getElementById('ref-number-input').value = suggestedRefNumber;
-        }
-
-        // --- DYNAMIC SECTION UI MANAGER ---
+        // --- DEFAULT TARGETS ---
+        let targets = { 
+            annualProfit: 25475359.75, 
+            profitMargin: 10.11,
+            materialCostPercentage: 53.00
+        };
         
-        // State variable for block drag and drop
-        let draggedItemIndex = null;
+        const historicalInventoryData = [
+            { "month": "March 2024", "products": [ { "rangeName": "35mm", "value": 1836484.24 }, { "rangeName": "ALLUSION", "value": 1195796.04 }, { "rangeName": "APEX", "value": 2356123.19 }, { "rangeName": "BAM", "value": 1223614.88 }, { "rangeName": "CELL", "value": 1200452.55 }, { "rangeName": "CUR", "value": 6342436.11 }, { "rangeName": "MOT", "value": 3098664.53 }, { "rangeName": "OUT", "value": 8160367.28 }, { "rangeName": "PACK", "value": 454341.41 }, { "rangeName": "RET", "value": 2049698.94 }, { "rangeName": "RIPPLE", "value": 693473.70 }, { "rangeName": "ROL", "value": 22832590.98 }, { "rangeName": "ROM", "value": 263732.71 }, { "rangeName": "SAMBRO", "value": 10835.90 }, { "rangeName": "SAMCOR", "value": 97205.15 }, { "rangeName": "SAMDES", "value": 52760.56 }, { "rangeName": "SAMDIS", "value": 353433.68 }, { "rangeName": "SAMELE", "value": 347735.01 }, { "rangeName": "SAMOUT", "value": 0 }, { "rangeName": "SAMPRI", "value": 68435.49 }, { "rangeName": "SAMRIP", "value": 0 }, { "rangeName": "SAMSTA", "value": 76698.21 }, { "rangeName": "SAMVEN", "value": 0 }, { "rangeName": "SHUT", "value": 4453985.47 }, { "rangeName": "SLIDE", "value": 107697.74 }, { "rangeName": "VAL", "value": 820303.72 }, { "rangeName": "VERT", "value": 681456.81 }, { "rangeName": "WV", "value": 7545120.51 } ] },
+            { "month": "April 2024", "products": [ { "rangeName": "35mm", "value": 1671985.51 }, { "rangeName": "ALLUSION", "value": 1108175.14 }, { "rangeName": "APEX", "value": 2248771.17 }, { "rangeName": "BAM", "value": 1099127.92 }, { "rangeName": "CELL", "value": 1218496.53 }, { "rangeName": "CUR", "value": 6156729.30 }, { "rangeName": "MOT", "value": 2626538.00 }, { "rangeName": "OUT", "value": 8007027.13 }, { "rangeName": "PACK", "value": 392220.09 }, { "rangeName": "RET", "value": 1893615.87 }, { "rangeName": "RIPPLE", "value": 664831.89 }, { "rangeName": "ROL", "value": 20281151.50 }, { "rangeName": "ROM", "value": 316164.98 }, { "rangeName": "SAMBRO", "value": 11095.49 }, { "rangeName": "SAMCOR", "value": 76884.23 }, { "rangeName": "SAMDES", "value": 35877.18 }, { "rangeName": "SAMDIS", "value": 299655.44 }, { "rangeName": "SAMELE", "value": 194797.75 }, { "rangeName": "SAMOUT", "value": 0 }, { "rangeName": "SAMPRI", "value": 64188.59 }, { "rangeName": "SAMRIP", "value": 0 }, { "rangeName": "SAMSTA", "value": 59417.52 }, { "rangeName": "SAMVEN", "value": 0 }, { "rangeName": "SHUT", "value": 4245144.82 }, { "rangeName": "SLIDE", "value": 100856.96 }, { "rangeName": "VAL", "value": 805621.20 }, { "rangeName": "VERT", "value": 693637.73 }, { "rangeName": "WV", "value": 6640738.14 } ] },
+            { "month": "May 2024", "products": [ { "rangeName": "35mm", "value": 1543262.13 }, { "rangeName": "ALLUSION", "value": 1023916.25 }, { "rangeName": "APEX", "value": 2204369.10 }, { "rangeName": "BAM", "value": 1078336.94 }, { "rangeName": "CELL", "value": 1158966.32 }, { "rangeName": "CUR", "value": 5989560.31 }, { "rangeName": "MOT", "value": 2703448.84 }, { "rangeName": "OUT", "value": 7661117.92 }, { "rangeName": "PACK", "value": 374356.10 }, { "rangeName": "RET", "value": 1853681.37 }, { "rangeName": "RIPPLE", "value": 662377.17 }, { "rangeName": "ROL", "value": 21171448.50 }, { "rangeName": "ROM", "value": 287993.53 }, { "rangeName": "SAMBRO", "value": 7436.19 }, { "rangeName": "SAMCOR", "value": 72976.86 }, { "rangeName": "SAMDES", "value": 35877.18 }, { "rangeName": "SAMDIS", "value": 294954.55 }, { "rangeName": "SAMELE", "value": 189197.58 }, { "rangeName": "SAMOUT", "value": 0 }, { "rangeName": "SAMPRI", "value": 63935.61 }, { "rangeName": "SAMRIP", "value": 0 }, { "rangeName": "SAMSTA", "value": 86097.68 }, { "rangeName": "SAMVEN", "value": 0 }, { "rangeName": "SHUT", "value": 3994557.90 }, { "rangeName": "SLIDE", "value": 96556.56 }, { "rangeName": "VAL", "value": 775400.51 }, { "rangeName": "VERT", "value": 861097.40 }, { "rangeName": "WV", "value": 6732391.39 } ] },
+            { "month": "June 2024", "products": [ { "rangeName": "35mm", "value": 1388620.25 }, { "rangeName": "ALLUSION", "value": 995989.53 }, { "rangeName": "APEX", "value": 2176436.35 }, { "rangeName": "BAM", "value": 1043506.81 }, { "rangeName": "CELL", "value": 1316778.19 }, { "rangeName": "CUR", "value": 5787154.17 }, { "rangeName": "MOT", "value": 2707028.45 }, { "rangeName": "OUT", "value": 7238394.05 }, { "rangeName": "PACK", "value": 349197.50 }, { "rangeName": "RET", "value": 1691745.47 }, { "rangeName": "RIPPLE", "value": 737949.33 }, { "rangeName": "ROL", "value": 21000989.20 }, { "rangeName": "ROM", "value": 251259.22 }, { "rangeName": "SAMBRO", "value": 30677.05 }, { "rangeName": "SAMCOR", "value": 79596.83 }, { "rangeName": "SAMDES", "value": 21104.22 }, { "rangeName": "SAMDIS", "value": 291667.75 }, { "rangeName": "SAMELE", "value": 167950.87 }, { "rangeName": "SAMOUT", "value": 0 }, { "rangeName": "SAMPRI", "value": 65419.70 }, { "rangeName": "SAMRIP", "value": 0 }, { "rangeName": "SAMSTA", "value": 98383.31 }, { "rangeName": "SAMVEN", "value": 0 }, { "rangeName": "SHUT", "value": 3739614.91 }, { "rangeName": "SLIDE", "value": 88416.68 }, { "rangeName": "VAL", "value": 733953.39 }, { "rangeName": "VERT", "value": 845602.60 }, { "rangeName": "WV", "value": 7158409.14 } ] },
+            { "month": "July 2024", "products": [ { "rangeName": "35mm", "value": 1448150.10 }, { "rangeName": "ALLUSION", "value": 959496.17 }, { "rangeName": "APEX", "value": 2243818.44 }, { "rangeName": "BAM", "value": 1047095.75 }, { "rangeName": "CELL", "value": 1395561.98 }, { "rangeName": "CUR", "value": 6441107.43 }, { "rangeName": "MOT", "value": 2646928.05 }, { "rangeName": "OUT", "value": 6715034.06 }, { "rangeName": "PACK", "value": 327924.80 }, { "rangeName": "RET", "value": 2117978.34 }, { "rangeName": "RIPPLE", "value": 656040.91 }, { "rangeName": "ROL", "value": 24053002.20 }, { "rangeName": "ROM", "value": 385630.78 }, { "rangeName": "SAMBRO", "value": 30272.98 }, { "rangeName": "SAMCOR", "value": 63931.36 }, { "rangeName": "SAMDES", "value": 16883.38 }, { "rangeName": "SAMDIS", "value": 253551.16 }, { "rangeName": "SAMELE", "value": 143288.14 }, { "rangeName": "SAMOUT", "value": 0 }, { "rangeName": "SAMPRI", "value": 11955.65 }, { "rangeName": "SAMRIP", "value": 0 }, { "rangeName": "SAMSTA", "value": 94672.26 }, { "rangeName": "SAMVEN", "value": 0 }, { "rangeName": "SHUT", "value": 3610145.55 }, { "rangeName": "SLIDE", "value": 85368.77 }, { "rangeName": "VAL", "value": 768119.85 }, { "rangeName": "VERT", "value": 818147.17 }, { "rangeName": "WV", "value": 6949338.21 } ] },
+            { "month": "August 2024", "products": [ { "rangeName": "35mm", "value": 1304345.72 }, { "rangeName": "ALLUSION", "value": 1138702.55 }, { "rangeName": "APEX", "value": 2656058.77 }, { "rangeName": "BAM", "value": 1023369.69 }, { "rangeName": "CELL", "value": 1343537.72 }, { "rangeName": "CUR", "value": 6142682.51 }, { "rangeName": "MOT", "value": 3051934.11 }, { "rangeName": "OUT", "value": 7807432.90 }, { "rangeName": "PACK", "value": 342808.12 }, { "rangeName": "RET", "value": 1960049.38 }, { "rangeName": "RIPPLE", "value": 659060.14 }, { "rangeName": "ROL", "value": 26062775.00 }, { "rangeName": "ROM", "value": 337550.99 }, { "rangeName": "SAMBRO", "value": 25270.72 }, { "rangeName": "SAMCOR", "value": 55407.30 }, { "rangeName": "SAMDES", "value": 4220.84 }, { "rangeName": "SAMDIS", "value": 205430.69 }, { "rangeName": "SAMELE", "value": 133875.13 }, { "rangeName": "SAMOUT", "value": 4590.40 }, { "rangeName": "SAMPRI", "value": 106592.00 }, { "rangeName": "SAMRIP", "value": 0 }, { "rangeName": "SAMSTA", "value": 103615.57 }, { "rangeName": "SAMVEN", "value": 0 }, { "rangeName": "SHUT", "value": 3474489.80 }, { "rangeName": "SLIDE", "value": 84079.49 }, { "rangeName": "VAL", "value": 732560.15 }, { "rangeName": "VERT", "value": 1000062.58 }, { "rangeName": "WV", "value": 6237036.80 } ] },
+            { "month": "September 2024", "products": [ { "rangeName": "35mm", "value": 1571387.48 }, { "rangeName": "ALLUSION", "value": 1112965.39 }, { "rangeName": "APEX", "value": 2661720.35 }, { "rangeName": "BAM", "value": 968227.28 }, { "rangeName": "CELL", "value": 1304327.68 }, { "rangeName": "CUR", "value": 6070924.06 }, { "rangeName": "MOT", "value": 3209346.82 }, { "rangeName": "OUT", "value": 7218484.29 }, { "rangeName": "PACK", "value": 471982.13 }, { "rangeName": "RET", "value": 1979744.32 }, { "rangeName": "RIPPLE", "value": 572571.54 }, { "rangeName": "ROL", "value": 30000361.78 }, { "rangeName": "ROM", "value": 317027.31 }, { "rangeName": "SAMBRO", "value": 22947.81 }, { "rangeName": "SAMCOR", "value": 48488.34 }, { "rangeName": "SAMDES", "value": 0 }, { "rangeName": "SAMDIS", "value": 232013.58 }, { "rangeName": "SAMELE", "value": 105225.04 }, { "rangeName": "SAMOUT", "value": 55045.41 }, { "rangeName": "SAMPRI", "value": 0 }, { "rangeName": "SAMSTA", "value": 93875.90 }, { "rangeName": "SAMVEN", "value": 0 }, { "rangeName": "SHUT", "value": 3629434.68 }, { "rangeName": "SLIDE", "value": 80320.61 }, { "rangeName": "VAL", "value": 823428.08 }, { "rangeName": "VERT", "value": 972184.72 }, { "rangeName": "WV", "value": 6519165.86 } ] },
+            { "month": "October 2024", "products": [ { "rangeName": "35mm", "value": 1410131.70 }, { "rangeName": "ALLUSION", "value": 1085308.11 }, { "rangeName": "APEX", "value": 2674938.35 }, { "rangeName": "BAM", "value": 1083903.12 }, { "rangeName": "CELL", "value": 1182171.36 }, { "rangeName": "CUR", "value": 5745062.60 }, { "rangeName": "MOT", "value": 3305023.15 }, { "rangeName": "OUT", "value": 8382935.25 }, { "rangeName": "PACK", "value": 497223.97 }, { "rangeName": "RET", "value": 1983647.69 }, { "rangeName": "RIPPLE", "value": 620861.65 }, { "rangeName": "ROL", "value": 30378551.80 }, { "rangeName": "ROM", "value": 285170.84 }, { "rangeName": "SAMBRO", "value": 20595.44 }, { "rangeName": "SAMCOR", "value": 80368.58 }, { "rangeName": "SAMDES", "value": 0 }, { "rangeName": "SAMDIS", "value": 178458.53 }, { "rangeName": "SAMELE", "value": 88743.92 }, { "rangeName": "SAMOUT", "value": 60369.18 }, { "rangeName": "SAMPRI", "value": 0 }, { "rangeName": "SAMSTA", "value": 82044.32 }, { "rangeName": "SAMVEN", "value": 0 }, { "rangeName": "SHUT", "value": 3275069.91 }, { "rangeName": "SLIDE", "value": 81403.29 }, { "rangeName": "VAL", "value": 793661.61 }, { "rangeName": "VERT", "value": 974891.09 }, { "rangeName": "WV", "value": 6896735.51 } ] },
+            { "month": "November 2024", "products": [ { "rangeName": "35mm", "value": 1231101.56 }, { "rangeName": "ALLUSION", "value": 1115087.86 }, { "rangeName": "APEX", "value": 2399921.74 }, { "rangeName": "BAM", "value": 964755.53 }, { "rangeName": "CELL", "value": 1185151.23 }, { "rangeName": "CUR", "value": 5427288.45 }, { "rangeName": "MOT", "value": 2355402.48 }, { "rangeName": "OUT", "value": 8822088.36 }, { "rangeName": "PACK", "value": 469550.48 }, { "rangeName": "RET", "value": 1831807.65 }, { "rangeName": "RIPPLE", "value": 651143.50 }, { "rangeName": "ROL", "value": 22552270.41 }, { "rangeName": "ROM", "value": 339828.97 }, { "rangeName": "SAMBRO", "value": 13313.09 }, { "rangeName": "SAMCOR", "value": 80451.85 }, { "rangeName": "SAMDES", "value": 0 }, { "rangeName": "SAMDIS", "value": 142898.67 }, { "rangeName": "SAMELE", "value": 78686.20 }, { "rangeName": "SAMOUT", "value": 47705.03 }, { "rangeName": "SAMPRI", "value": 0 }, { "rangeName": "SAMSTA", "value": 80145.53 }, { "rangeName": "SAMVEN", "value": 0 }, { "rangeName": "SHUT", "value": 4347700.91 }, { "rangeName": "SLIDE", "value": 65960.43 }, { "rangeName": "VAL", "value": 787110.06 }, { "rangeName": "VERT", "value": 918634.59 }, { "rangeName": "WV", "value": 6566603.18 } ] },
+            { "month": "December 2024", "products": [ { "rangeName": "35mm", "value": 1885685.23 }, { "rangeName": "ALLUSION", "value": 1208724.26 }, { "rangeName": "APEX", "value": 2250907.05 }, { "rangeName": "BAM", "value": 927331.25 }, { "rangeName": "CELL", "value": 1066798.10 }, { "rangeName": "CUR", "value": 5313679.95 }, { "rangeName": "MOT", "value": 2686837.06 }, { "rangeName": "OUT", "value": 8637376.96 }, { "rangeName": "PACK", "value": 279671.56 }, { "rangeName": "RET", "value": 2034720.44 }, { "rangeName": "RIPPLE", "value": 621769.75 }, { "rangeName": "ROL", "value": 26067101.45 }, { "rangeName": "ROM", "value": 265740.46 }, { "rangeName": "SAMBRO", "value": 12731.85 }, { "rangeName": "SAMCOR", "value": 78787.91 }, { "rangeName": "SAMDES", "value": 28980.00 }, { "rangeName": "SAMDIS", "value": 142189.47 }, { "rangeName": "SAMELE", "value": 214093.09 }, { "rangeName": "SAMOUT", "value": 14012.50 }, { "rangeName": "SAMPRI", "value": 46557.15 }, { "rangeName": "SAMRIP", "value": 10922.49 }, { "rangeName": "SAMSTA", "value": 71518.94 }, { "rangeName": "SAMVEN", "value": 7845.88 }, { "rangeName": "SHUT", "value": 4117420.96 }, { "rangeName": "SLIDE", "value": 65238.60 }, { "rangeName": "VAL", "value": 712731.89 }, { "rangeName": "VERT", "value": 833665.92 }, { "rangeName": "WV", "value": 6385255.62 } ] },
+            { "month": "January 2025", "products": [ { "rangeName": "35mm", "value": 2086287.20 }, { "rangeName": "ALLUSION", "value": 1248693.41 }, { "rangeName": "APEX", "value": 2534626.30 }, { "rangeName": "BAM", "value": 658444.87 }, { "rangeName": "CELL", "value": 989188.98 }, { "rangeName": "CUR", "value": 6082257.63 }, { "rangeName": "MOT", "value": 2743965.24 }, { "rangeName": "OUT", "value": 8768984.18 }, { "rangeName": "PACK", "value": 487959.66 }, { "rangeName": "RET", "value": 2052222.08 }, { "rangeName": "RIPPLE", "value": 773148.39 }, { "rangeName": "ROL", "value": 25411221.75 }, { "rangeName": "ROM", "value": 245415.33 }, { "rangeName": "SAMBRO", "value": 12731.85 }, { "rangeName": "SAMCOR", "value": 56319.33 }, { "rangeName": "SAMDES", "value": 73044.73 }, { "rangeName": "SAMDIS", "value": 140265.27 }, { "rangeName": "SAMELE", "value": 199364.10 }, { "rangeName": "SAMOUT", "value": 25225.20 }, { "rangeName": "SAMPRI", "value": 46012.02 }, { "rangeName": "SAMRIP", "value": 7888.47 }, { "rangeName": "SAMSTA", "value": 79278.70 }, { "rangeName": "SAMVEN", "value": 125505.36 }, { "rangeName": "SHUT", "value": 3769824.09 }, { "rangeName": "SLIDE", "value": 69350.16 }, { "rangeName": "VAL", "value": 805621.20 }, { "rangeName": "VERT", "value": 918379.73 }, { "rangeName": "WV", "value": 6712195.86 } ] },
+            { "month": "February 2025", "products": [ { "rangeName": "35mm", "value": 1959725.24 }, { "rangeName": "ALLUSION", "value": 1521546.93 }, { "rangeName": "APEX", "value": 2534626.30 }, { "rangeName": "BAM", "value": 601079.82 }, { "rangeName": "CELL", "value": 1155097.54 }, { "rangeName": "CUR", "value": 5823544.36 }, { "rangeName": "MOT", "value": 2783920.34 }, { "rangeName": "OUT", "value": 8796441.54 }, { "rangeName": "PACK", "value": 389494.46 }, { "rangeName": "RET", "value": 1956434.40 }, { "rangeName": "RIPPLE", "value": 766282.59 }, { "rangeName": "ROL", "value": 27816640.65 }, { "rangeName": "ROM", "value": 219292.11 }, { "rangeName": "SAMBRO", "value": 6863.06 }, { "rangeName": "SAMCOR", "value": 43537.81 }, { "rangeName": "SAMDES", "value": 68391.93 }, { "rangeName": "SAMDIS", "value": 138850.79 }, { "rangeName": "SAMELE", "value": 42272.56 }, { "rangeName": "SAMOUT", "value": 159477.00 }, { "rangeName": "SAMPRI", "value": 11955.65 }, { "rangeName": "SAMRIP", "value": 3337.43 }, { "rangeName": "SAMSTA", "value": 80476.19 }, { "rangeName": "SAMVEN", "value": 101239.26 }, { "rangeName": "SHUT", "value": 4104724.67 }, { "rangeName": "SLIDE", "value": 81710.52 }, { "rangeName": "VAL", "value": 683040.34 }, { "rangeName": "VERT", "value": 956028.98 }, { "rangeName": "WV", "value": 7628317.43 } ] },
+            { "month": "March 2025", "products": [ { "rangeName": "35mm", "value": 1804087.85 }, { "rangeName": "ALLUSION", "value": 1421697.01 }, { "rangeName": "APEX", "value": 2721095.31 }, { "rangeName": "BAM", "value": 575306.26 }, { "rangeName": "CELL", "value": 1110190.03 }, { "rangeName": "CUR", "value": 5490640.36 }, { "rangeName": "MOT", "value": 2494036.62 }, { "rangeName": "OUT", "value": 8964458.82 }, { "rangeName": "PACK", "value": 305208.36 }, { "rangeName": "RET", "value": 1852565.26 }, { "rangeName": "RIPPLE", "value": 703663.40 }, { "rangeName": "ROL", "value": 27151523.52 }, { "rangeName": "ROM", "value": 294016.64 }, { "rangeName": "SAMBRO", "value": 3714.90 }, { "rangeName": "SAMCOR", "value": 27183.84 }, { "rangeName": "SAMDES", "value": 137218.10 }, { "rangeName": "SAMDIS", "value": 159696.19 }, { "rangeName": "SAMELE", "value": 107106.64 }, { "rangeName": "SAMOUT", "value": 113420.00 }, { "rangeName": "SAMPRI", "value": 0 }, { "rangeName": "SAMRIP", "value": 0 }, { "rangeName": "SAMSTA", "value": 74749.24 }, { "rangeName": "SAMVEN", "value": 99059.19 }, { "rangeName": "SHUT", "value": 4607786.99 }, { "rangeName": "SLIDE", "value": 163900.73 }, { "rangeName": "VAL", "value": 641402.31 }, { "rangeName": "VERT", "value": 907608.29 }, { "rangeName": "WV", "value": 6899865.96 } ] },
+            { "month": "April 2025", "products": [ { "rangeName": "35mm", "value": 1720450.95 }, { "rangeName": "ALLUSION", "value": 1655885.52 }, { "rangeName": "APEX", "value": 2911206.74 }, { "rangeName": "BAM", "value": 560104.11 }, { "rangeName": "CELL", "value": 1376767.29 }, { "rangeName": "CUR", "value": 5268680.85 }, { "rangeName": "MOT", "value": 2973713.13 }, { "rangeName": "OUT", "value": 8217586.68 }, { "rangeName": "PACK", "value": 341784.68 }, { "rangeName": "RET", "value": 1787279.38 }, { "rangeName": "RIPPLE", "value": 796375.71 }, { "rangeName": "ROL", "value": 28046285.90 }, { "rangeName": "ROM", "value": 283657.93 }, { "rangeName": "SAMBRO", "value": 2102.51 }, { "rangeName": "SAMCOR", "value": 19985.10 }, { "rangeName": "SAMDES", "value": 156657.42 }, { "rangeName": "SAMDIS", "value": 117757.99 }, { "rangeName": "SAMELE", "value": 304759.42 }, { "rangeName": "SAMOUT", "value": 17369.01 }, { "rangeName": "SAMPRI", "value": 100215.00 }, { "rangeName": "SAMRIP", "value": 48783.00 }, { "rangeName": "SAMSTA", "value": 67137.13 }, { "rangeName": "SAMVEN", "value": 96302.35 }, { "rangeName": "SHUT", "value": 4330515.67 }, { "rangeName": "SLIDE", "value": 156877.86 }, { "rangeName": "VAL", "value": 626619.76 }, { "rangeName": "VERT", "value": 956028.98 }, { "rangeName": "WV", "value": 70071328.30 } ] },
+            { "month": "May 2025", "products": [ { "rangeName": "35mm", "value": 1712310.58 }, { "rangeName": "ALLUSION", "value": 1503698.44 }, { "rangeName": "APEX", "value": 3025668.31 }, { "rangeName": "BAM", "value": 586533.80 }, { "rangeName": "CELL", "value": 1345301.85 }, { "rangeName": "CUR", "value": 5477100.02 }, { "rangeName": "MOT", "value": 2612660.25 }, { "rangeName": "OUT", "value": 8891940.23 }, { "rangeName": "PACK", "value": 431239.89 }, { "rangeName": "RET", "value": 1976188.97 }, { "rangeName": "RIPPLE", "value": 954671.65 }, { "rangeName": "ROL", "value": 30179567.70 }, { "rangeName": "ROM", "value": 309019.69 }, { "rangeName": "SAMBRO", "value": 5653.85 }, { "rangeName": "SAMCOR", "value": 37591.45 }, { "rangeName": "SAMDES", "value": 153038.15 }, { "rangeName": "SAMDIS", "value": 122610.95 }, { "rangeName": "SAMELE", "value": 177422.09 }, { "rangeName": "SAMOUT", "value": 104010.00 }, { "rangeName": "SAMPRI", "value": 0 }, { "rangeName": "SAMRIP", "value": 61509.00 }, { "rangeName": "SAMSTA", "value": 63016.49 }, { "rangeName": "SAMVEN", "value": 79639.74 }, { "rangeName": "SHUT", "value": 4218030.83 }, { "rangeName": "SLIDE", "value": 167073.82 }, { "rangeName": "VAL", "value": 754343.91 }, { "rangeName": "VERT", "value": 1050817.19 }, { "rangeName": "WV", "value": 73558117.20 } ] },
+            { "month": "June 2025", "products": [ { "rangeName": "35mm", "value": 1533144.56 }, { "rangeName": "ALLUSION", "value": 1540208.55 }, { "rangeName": "APEX", "value": 3001384.98 }, { "rangeName": "BAM", "value": 588501.13 }, { "rangeName": "CELL", "value": 1313883.29 }, { "rangeName": "CUR", "value": 5264528.30 }, { "rangeName": "MOT", "value": 2742806.76 }, { "rangeName": "OUT", "value": 8264805.72 }, { "rangeName": "PACK", "value": 333904.67 }, { "rangeName": "RET", "value": 1910329.40 }, { "rangeName": "RIPPLE", "value": 1009818.48 }, { "rangeName": "ROL", "value": 30495101.70 }, { "rangeName": "ROM", "value": 285170.84 }, { "rangeName": "SAMBRO", "value": 547.24 }, { "rangeName": "SAMCOR", "value": 25148.16 }, { "rangeName": "SAMDES", "value": 146338.45 }, { "rangeName": "SAMDIS", "value": 84286.37 }, { "rangeName": "SAMELE", "value": 301031.17 }, { "rangeName": "SAMOUT", "value": 17441.21 }, { "rangeName": "SAMPRI", "value": 104010.00 }, { "rangeName": "SAMRIP", "value": 82113.00 }, { "rangeName": "SAMSTA", "value": 56542.69 }, { "rangeName": "SAMVEN", "value": 66567.10 }, { "rangeName": "SHUT", "value": 4482464.39 }, { "rangeName": "SLIDE", "value": 187009.77 }, { "rangeName": "VAL", "value": 740266.36 }, { "rangeName": "VERT", "value": 1103465.51 }, { "rangeName": "WV", "value": 72539525.80 } ] },
+            { "month": "July 2025", "products": [ { "rangeName": "35mm", "value": 1817688.92 }, { "rangeName": "ALLUSION", "value": 1764779.00 }, { "rangeName": "APEX", "value": 2986606.31 }, { "rangeName": "BAM", "value": 539261.89 }, { "rangeName": "CELL", "value": 1400657.41 }, { "rangeName": "CUR", "value": 5543199.34 }, { "rangeName": "MOT", "value": 2723698.27 }, { "rangeName": "OUT", "value": 7716224.26 }, { "rangeName": "PACK", "value": 423611.15 }, { "rangeName": "RET", "value": 2251877.18 }, { "rangeName": "RIPPLE", "value": 1079732.30 }, { "rangeName": "ROL", "value": 31080122.50 }, { "rangeName": "ROM", "value": 355824.73 }, { "rangeName": "SAMBRO", "value": 27.40 }, { "rangeName": "SAMCOR", "value": 23944.52 }, { "rangeName": "SAMDES", "value": 143325.52 }, { "rangeName": "SAMDIS", "value": 176524.32 }, { "rangeName": "SAMELE", "value": 332675.73 }, { "rangeName": "SAMOUT", "value": 23003.32 }, { "rangeName": "SAMPRI", "value": 91857.00 }, { "rangeName": "SAMRIP", "value": 82113.00 }, { "rangeName": "SAMSTA", "value": 57542.33 }, { "rangeName": "SAMVEN", "value": 66567.10 }, { "rangeName": "SHUT", "value": 4827749.66 }, { "rangeName": "SLIDE", "value": 185141.61 }, { "rangeName": "VAL", "value": 804058.69 }, { "rangeName": "VERT", "value": 1088815.14 }, { "rangeName": "WV", "value": 7458228.49 } ] }
+        ];
+        
+        const historicalAnnualData = {
+            fy2022: { netProfit: 14318675.49 },
+            fy2023: { netProfit: 8624848.47 },
+            fy2024: { netProfit: 11013788.22 },
+            fy2025: { netProfit: 13793668.42 },
+        };
 
-        function handleDragStart(event, index) {
-            draggedItemIndex = index;
-            setTimeout(() => event.target.classList.add('dragging'), 0);
-            event.dataTransfer.effectAllowed = 'move';
-            event.dataTransfer.setData('text/plain', index);
+        // --- DATE & FINANCIAL YEAR LOGIC ---
+        function parseMonthYear(monthYearStr) {
+            if (!monthYearStr) return null;
+            const parts = monthYearStr.split(' ');
+            if (parts.length !== 2) return null;
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            const monthIndex = monthNames.findIndex(m => m.toLowerCase().startsWith(parts[0].toLowerCase()));
+            if (monthIndex === -1) return null;
+            const year = parseInt(parts[1], 10);
+            if (isNaN(year)) return null;
+            return new Date(Date.UTC(year, monthIndex, 1));
         }
 
-        function handleDragEnd(event) {
-            event.target.classList.remove('dragging');
-            draggedItemIndex = null;
+        function getFinancialYearStartYear(date = new Date()) {
+            const month = date.getUTCMonth(); // 0-11
+            const year = date.getUTCFullYear();
+            return month < 2 ? year - 1 : year; // Financial year starts in March (month 2)
         }
 
-        function handleDragOver(event) {
-            event.preventDefault(); 
-            event.dataTransfer.dropEffect = 'move';
-        }
-
-        function handleDrop(event) {
-            event.preventDefault();
-            if (draggedItemIndex === null) return;
-
-            const dropTarget = event.target.closest('.section-block');
-            if (!dropTarget) return;
-
-            const targetIndex = parseInt(dropTarget.dataset.index, 10);
+        function getFinancialYearData(allData) {
+            if (!allData || allData.length === 0) return [];
             
-            if (draggedItemIndex !== targetIndex) {
-                const itemToMove = documentSections.splice(draggedItemIndex, 1)[0];
-                documentSections.splice(targetIndex, 0, itemToMove);
-                renderSectionsForm();
-            }
-        }
+            const currentFYStartYear = getFinancialYearStartYear();
+            const fyStartDate = new Date(Date.UTC(currentFYStartYear, 2, 1));
 
-        function addSection(type) {
-            documentSections.push({
-                id: generateId(),
-                type: type,
-                title: type === 'text' ? 'New Text Section' : 'New Image Gallery',
-                content: '',
-                images: []
-            });
-            renderSectionsForm();
-        }
-
-        function deleteSection(index) {
-            if(confirm("Delete this section block?")) {
-                documentSections.splice(index, 1);
-                renderSectionsForm();
-            }
-        }
-
-        // --- INDIVIDUAL IMAGE LAYOUT METHODS ---
-        window.updateImageSize = function(sectionIndex, imgIndex, sizeStr) {
-            documentSections[sectionIndex].images[imgIndex].size = sizeStr;
-            renderSectionsForm();
-        }
-
-        window.moveImage = function(sectionIndex, imgIndex, direction) {
-            const section = documentSections[sectionIndex];
-            if (direction === -1 && imgIndex > 0) {
-                // Move Left/Up
-                [section.images[imgIndex - 1], section.images[imgIndex]] = [section.images[imgIndex], section.images[imgIndex - 1]];
-            } else if (direction === 1 && imgIndex < section.images.length - 1) {
-                // Move Right/Down
-                [section.images[imgIndex], section.images[imgIndex + 1]] = [section.images[imgIndex + 1], section.images[imgIndex]];
-            }
-            renderSectionsForm();
-        }
-
-        function renderSectionsForm() {
-            const container = document.getElementById('dynamic-sections-container');
-            container.innerHTML = '';
-
-            documentSections.forEach((section, index) => {
-                const block = document.createElement('div');
-                block.className = 'section-block bg-white border border-gray-200 rounded-lg shadow-sm relative group flex';
-                block.draggable = true;
-                block.dataset.index = index;
-                block.ondragstart = (e) => handleDragStart(e, index);
-                block.ondragend = handleDragEnd;
-                
-                const dragHandle = `
-                    <div class="drag-handle bg-gray-50 border-r border-gray-200 rounded-l-lg flex-shrink-0" title="Drag to reorder">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 8h16M4 16h16"></path></svg>
-                    </div>
-                `;
-
-                const controls = `
-                    <div class="absolute right-4 top-4 flex items-center opacity-50 group-hover:opacity-100 transition-opacity z-10">
-                        <button onclick="deleteSection(${index})" class="p-1.5 bg-white text-gray-500 hover:text-red-600 hover:bg-red-50 rounded shadow-sm border border-gray-200" title="Delete Section">✕</button>
-                    </div>
-                `;
-
-                const titleInput = `
-                    <div class="mb-4 pr-12">
-                        <label class="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Section Title</label>
-                        <input type="text" value="${section.title}" oninput="documentSections[${index}].title = this.value" class="w-full text-lg font-bold px-0 py-1 border-0 border-b border-dashed border-gray-300 focus:ring-0 focus:border-blue-500 transition bg-transparent">
-                    </div>
-                `;
-
-                let bodyHtml = '';
-
-                if (section.type === 'text') {
-                    bodyHtml = `
-                        <div>
-                            <textarea id="textarea-${section.id}" rows="4" oninput="documentSections[${index}].content = this.value" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition" placeholder="Enter content for this section...">${section.content || ''}</textarea>
-                            <button onclick="refineSectionText('${section.id}', ${index})" class="mt-2 px-3 py-1.5 text-xs font-semibold text-blue-600 bg-blue-100 rounded-md hover:bg-blue-200 transition flex items-center gap-2 w-max">
-                                <span class="refine-text">Refine Section with AI</span> <span class="spinner hidden"></span>
-                            </button>
-                        </div>
-                    `;
-                } else if (section.type === 'images') {
-                    // Image Grid HTML with Individual Size Controls
-                    const imgGridHtml = section.images.map((imgObj, imgIndex) => {
-                        const currentSize = imgObj.size || 'medium';
-                        
-                        return `
-                        <div class="relative group border rounded-lg p-2 bg-gray-50 flex flex-col">
-                            <div class="relative mb-2 flex-grow">
-                                <img src="${imgObj.src}" class="w-full h-32 object-cover rounded shadow-sm border bg-white">
-                                <!-- Reorder Arrows -->
-                                <div class="absolute top-1 left-1 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                    <button onclick="moveImage(${index}, ${imgIndex}, -1)" class="bg-black bg-opacity-70 text-white rounded w-6 h-6 flex items-center justify-center text-xs hover:bg-blue-600 transition" title="Move Left/Up">←</button>
-                                    <button onclick="moveImage(${index}, ${imgIndex}, 1)" class="bg-black bg-opacity-70 text-white rounded w-6 h-6 flex items-center justify-center text-xs hover:bg-blue-600 transition" title="Move Right/Down">→</button>
-                                </div>
-                            </div>
-                            
-                            <!-- Individual Size Control -->
-                            <div class="mb-2">
-                                <label class="block text-[10px] font-semibold text-gray-500 uppercase tracking-wide">Image Size</label>
-                                <select onchange="updateImageSize(${index}, ${imgIndex}, this.value)" class="w-full mt-0.5 px-2 py-1 border border-gray-300 rounded-md text-xs text-gray-700 bg-white">
-                                    <option value="small" ${currentSize === 'small' ? 'selected' : ''}>Small (1/3 Width)</option>
-                                    <option value="medium" ${currentSize === 'medium' ? 'selected' : ''}>Medium (1/2 Width)</option>
-                                    <option value="large" ${currentSize === 'large' ? 'selected' : ''}>Large (Full Width)</option>
-                                </select>
-                            </div>
-
-                            <input type="text" value="${imgObj.heading || ''}" oninput="documentSections[${index}].images[${imgIndex}].heading = this.value" class="w-full px-2 py-1 border border-gray-300 rounded-md text-xs" placeholder="Image heading...">
-                            
-                            <button onclick="removeImageFromSection(${index}, ${imgIndex})" class="absolute -top-2 -right-2 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs opacity-0 group-hover:opacity-100 transition-opacity shadow">✕</button>
-                        </div>
-                    `}).join('');
-
-                    bodyHtml = `
-                        <div>
-                            <div id="drop-zone-${section.id}" class="drop-zone flex justify-center items-center w-full p-6 rounded-lg cursor-pointer bg-gray-50 hover:bg-blue-50 transition" onclick="document.getElementById('file-${section.id}').click()">
-                                <div class="text-center">
-                                    <p class="text-sm text-gray-600"><span class="font-semibold">Click to add images</span> or drag and drop</p>
-                                </div>
-                                <input type="file" id="file-${section.id}" multiple accept="image/*" class="hidden" onchange="handleSectionFiles(this.files, ${index})">
-                            </div>
-                            
-                            <!-- Display in a responsive 3-column CSS Grid inside the editor for organization -->
-                            <div class="mt-4 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4" id="img-grid-${section.id}">
-                                ${imgGridHtml}
-                            </div>
-                            
-                            ${section.images.length > 0 ? `
-                            <button onclick="generateHeadingsForSection(${index})" class="mt-4 px-3 py-1.5 text-xs font-semibold text-emerald-700 bg-emerald-100 rounded-md hover:bg-emerald-200 transition flex items-center gap-2 w-max">
-                                <span class="refine-text">Generate Headings with AI</span> <span class="spinner hidden"></span>
-                            </button>
-                            ` : ''}
-                        </div>
-                    `;
-                }
-
-                const contentWrapper = `
-                    <div class="flex-grow p-5 w-full overflow-hidden">
-                        ${controls}
-                        ${titleInput}
-                        ${bodyHtml}
-                    </div>
-                `;
-
-                block.innerHTML = dragHandle + contentWrapper;
-                container.appendChild(block);
-                
-                if (section.type === 'images') {
-                    const dz = document.getElementById(`drop-zone-${section.id}`);
-                    if (dz) {
-                        dz.addEventListener('dragover', (e) => { e.preventDefault(); dz.classList.add('dragover'); });
-                        dz.addEventListener('dragleave', () => dz.classList.remove('dragover'));
-                        dz.addEventListener('drop', (e) => { e.preventDefault(); dz.classList.remove('dragover'); handleSectionFiles(e.dataTransfer.files, index); });
-                    }
-                }
+            return allData.filter(d => {
+                const itemDate = parseMonthYear(d.month);
+                return itemDate && !isNaN(itemDate) && itemDate >= fyStartDate;
             });
         }
 
-        // --- IMAGE HANDLING PER SECTION ---
-        const toBase64 = file => new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.readAsDataURL(file);
-            reader.onload = () => resolve(reader.result);
-            reader.onerror = error => reject(error);
-        });
-
-        function handleSectionFiles(files, sectionIndex) {
-            if (!files || files.length === 0) return;
-            const section = documentSections[sectionIndex];
-            
-            Array.from(files).forEach(file => {
-                if (!file.type.startsWith('image/')) return;
-                toBase64(file).then(base64_src => {
-                    section.images.push({ src: base64_src, heading: '', mimeType: file.type, size: 'medium' });
-                    renderSectionsForm();
-                });
-            });
-        }
-
-        function removeImageFromSection(sectionIndex, imgIndex) {
-            documentSections[sectionIndex].images.splice(imgIndex, 1);
-            renderSectionsForm();
-        }
-
-        // --- AI API PROXY INTEGRATION ---
-        async function callGemini(prompt, model, responseSchema = null) {
-            const geminiPayload = { 
-                contents: [{ role: "user", parts: Array.isArray(prompt) ? prompt : [{ text: prompt }] }] 
-            };
-            if (responseSchema) {
-                geminiPayload.generationConfig = { responseMimeType: "application/json", responseSchema: responseSchema };
-            }
-            const proxyPayload = { model: model, payload: geminiPayload };
-            const response = await fetch(PROXY_API_URL, { 
-                method: 'POST', 
-                headers: { 'Content-Type': 'application/json' }, 
-                body: JSON.stringify(proxyPayload) 
-            });
-
-            if (!response.ok) {
-                let msg = `Request failed: ${response.status}`;
-                try { const data = await response.json(); if (data.error) msg = data.error.message; } catch (e) {}
-                throw new Error(msg);
-            }
-            const result = await response.json();
-            return result.candidates[0].content.parts[0].text;
-        }
-
-        async function refineSectionText(sectionId, index) {
-            const textarea = document.getElementById(`textarea-${sectionId}`);
-            const button = textarea.nextElementSibling;
-            const spinner = button.querySelector('.spinner');
-            const buttonText = button.querySelector('.refine-text');
-            const originalText = documentSections[index].content;
-            
-            if (!originalText.trim()) { alert("Please enter some text to refine."); return; }
-            
-            spinner.classList.remove('hidden');
-            buttonText.textContent = 'Refining...';
-            button.disabled = true;
-            try {
-                const prompt = `Rewrite and improve the following text for a professional technical release document. Enhance its clarity, grammar, and formal tone. Respond with only the improved text. Original text: "${originalText}"`;
-                const refinedText = await callGemini(prompt, 'gemini-3-flash-preview');
-                documentSections[index].content = refinedText.trim();
-                renderSectionsForm(); 
-            } catch (error) {
-                alert(`Error refining text: ${error.message}`);
-            } finally {
-                if(document.getElementById(`textarea-${sectionId}`)) { 
-                    spinner.classList.add('hidden');
-                    buttonText.textContent = 'Refine Section with AI';
-                    button.disabled = false;
+        // --- UTILITY CALCULATION FUNCTIONS ---
+        function calculateProjectedProfit(fullData) {
+            if (!fullData || !fullData.monthlyData || fullData.monthlyData.length === 0) return 0;
+            let profitGrowthRates = [];
+            const years = Object.keys(historicalAnnualData).sort();
+            for (let i = 1; i < years.length; i++) {
+                const prevYear = historicalAnnualData[years[i-1]];
+                const currentYear = historicalAnnualData[years[i]];
+                if (prevYear.netProfit && currentYear.netProfit) {
+                    profitGrowthRates.push((currentYear.netProfit - prevYear.netProfit) / prevYear.netProfit);
                 }
             }
-        }
-        
-        async function generateHeadingsForSection(index) {
-            const section = documentSections[index];
-            if (section.images.length === 0) return;
-            
-            let context = `Title: ${document.getElementById('title').value}\n`;
-            documentSections.filter(s => s.type === 'text').forEach(s => {
-                context += `${s.title}: ${s.content}\n`;
-            });
-
-            const promptParts = [{ text: `Based on the following document context, generate a short, descriptive heading for each image. Context: ${context}\n\n` }];
-            section.images.forEach(img => {
-                promptParts.push({ inlineData: { mimeType: img.mimeType || 'image/jpeg', data: img.src.split(',')[1] } });
-                promptParts.push({ text: "\n" });
-            });
-
-            const block = document.querySelectorAll('.section-block')[index];
-            const btn = block.querySelector('button.bg-emerald-100');
-            const spinner = btn.querySelector('.spinner');
-            const btnText = btn.querySelector('.refine-text');
-            
-            spinner.classList.remove('hidden');
-            btnText.textContent = 'Generating...';
-            btn.disabled = true;
-
-            try {
-                const schema = { type: "OBJECT", properties: { headings: { type: "ARRAY", items: { "type": "STRING" } } } };
-                const resultText = await callGemini(promptParts, 'gemini-3-flash-preview', schema);
-                const resultJson = JSON.parse(resultText);
-                
-                if (resultJson.headings && resultJson.headings.length === section.images.length) {
-                    resultJson.headings.forEach((heading, i) => {
-                        section.images[i].heading = heading;
-                    });
-                    renderSectionsForm();
-                } else { throw new Error("Incorrect number of headings received."); }
-            } catch (error) {
-                alert(`Error generating image headings: ${error.message}`);
-                spinner.classList.add('hidden');
-                btnText.textContent = 'Generate Headings with AI';
-                btn.disabled = false;
+            const averageProfitGrowthRate = profitGrowthRates.length > 0 ? profitGrowthRates.reduce((a, b) => a + b, 0) / profitGrowthRates.length : 0.05; 
+            const lastYearProfit = historicalAnnualData[years[years.length - 1]].netProfit;
+            const historicalProjection = lastYearProfit * (1 + averageProfitGrowthRate);
+            const ytdData = getFinancialYearData(fullData.monthlyData);
+            if (ytdData.length === 0) {
+                return historicalProjection;
             }
+            const ytdProfit = ytdData.reduce((sum, item) => sum + item.netProfit, 0);
+            const averageMonthlyYtdProfit = ytdProfit / ytdData.length;
+            const currentRunRateProjection = averageMonthlyYtdProfit * 12;
+            const currentYearWeight = ytdData.length / 12.0;
+            const historicalWeight = 1 - currentYearWeight;
+            const blendedProjection = (currentRunRateProjection * currentYearWeight) + (historicalProjection * historicalWeight);
+            return blendedProjection;
         }
 
-        // --- ASYNC PREVIEW DOCUMENT (Native Firebase Natively) ---
-        async function generateDocument() {
-            const btn = document.getElementById('generate-button');
-            const btnText = document.getElementById('generate-btn-text');
-            const spinner = document.getElementById('generate-spinner');
-            
-            btn.disabled = true;
-            btnText.textContent = "Processing Images securely...";
-            spinner.classList.remove('hidden');
-
-            try {
-                // 1. PRE-PROCESS IMAGES: Since bucket CORS is fixed, we fetch directly from Firebase
-                for (const section of documentSections) {
-                    if (section.type === 'images' && section.images) {
-                        for (const img of section.images) {
-                            if (img.src.startsWith('http') && img.storagePath) {
-                                // If we haven't already locally cached this image during this session
-                                if (!img.previewSrc) {
-                                    try {
-                                        // Use native Firebase getBlob to fetch securely and directly
-                                        const imgRef = window.firebase.ref(window.firebase.storage, img.storagePath);
-                                        const blob = await window.firebase.getBlob(imgRef);
-                                        img.previewSrc = await toBase64(blob);
-                                    } catch (fetchErr) {
-                                        console.error("Failed to securely fetch image directly from Firebase:", fetchErr);
-                                        // Fallback to direct src to prevent hard crash
-                                        img.previewSrc = img.src;
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-
-                // 2. Map form data to Preview Output
-                const refNumber = document.getElementById('ref-number-input').value;
-                document.getElementById('output-ref').textContent = refNumber;
-                document.getElementById('output-products').textContent = document.getElementById('productsAffected').value;
-                document.getElementById('output-category').textContent = document.getElementById('category').value;
-                document.getElementById('output-title').textContent = document.getElementById('title').value || 'Untitled Release';
-                
-                const releaseDate = new Date().toLocaleDateString('en-CA');
-                const effectiveDateRaw = document.getElementById('effectiveDate').value;
-                const effectiveDate = effectiveDateRaw ? new Date(effectiveDateRaw + 'T00:00:00').toLocaleDateString('en-CA') : 'TBD';
-                document.getElementById('output-releaseDate').textContent = releaseDate;
-                document.getElementById('output-effectiveDate').textContent = effectiveDate;
-
-                // 3. Render Dynamic Sections with CSS Grid
-                const outContainer = document.getElementById('output-sections-container');
-                outContainer.innerHTML = '';
-
-                documentSections.forEach(section => {
-                    const secDiv = document.createElement('div');
-                    secDiv.className = "mb-8";
-                    
-                    const titleHtml = `<h3 class="text-xl font-bold mb-3 text-gray-800 border-b-2 border-blue-200 pb-2">${section.title}</h3>`;
-                    
-                    if (section.type === 'text') {
-                        secDiv.innerHTML = `${titleHtml}<p class="text-gray-700 leading-relaxed whitespace-pre-wrap break-words">${section.content}</p>`;
-                        if (section.title.toLowerCase().includes('impact')) {
-                            secDiv.innerHTML = `
-                                <div class="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
-                                    <div class="flex">
-                                        <div class="flex-shrink-0"><svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.21 3.03-1.742 3.03H4.42c-1.532 0-2.492-1.696-1.742-3.03l5.58-9.92zM10 13a1 1 0 110-2 1 1 0 010 2zm-1-8a1 1 0 011-1h.01a1 1 0 110 2H10a1 1 0 01-1-1z" clip-rule="evenodd" /></svg></div>
-                                        <div class="ml-3"><h3 class="text-lg font-bold text-yellow-800">${section.title}</h3><div class="mt-2 text-sm text-yellow-700"><p class="whitespace-pre-wrap">${section.content}</p></div></div>
-                                    </div>
-                                </div>
-                            `;
-                        }
-                    } else if (section.type === 'images' && section.images.length > 0) {
-                        
-                        // We use a highly flexible 6-column grid to allow precise sizing
-                        const gridHtml = section.images.map(img => {
-                            const sizeMap = {
-                                'small': 'col-span-2', // 2/6 = 1/3 width
-                                'medium': 'col-span-3', // 3/6 = 1/2 width
-                                'large': 'col-span-6'  // 6/6 = Full width
-                            };
-                            const spanClass = sizeMap[img.size || 'medium'];
-                            // Prioritize the locally cached proxy base64 to avoid Canvas tainting issues
-                            const renderSrc = img.previewSrc || img.src;
-
-                            return `
-                            <div class="${spanClass} flex flex-col">
-                                <h4 class="text-sm font-semibold text-gray-700 mb-1 break-words">${img.heading || ''}</h4>
-                                <img src="${renderSrc}" class="w-full h-auto rounded-lg shadow-sm border border-gray-200 bg-white" crossorigin="anonymous">
-                            </div>
-                        `}).join('');
-                        
-                        secDiv.innerHTML = `${titleHtml}<div class="mt-4 grid grid-cols-6 gap-4 items-start">${gridHtml}</div>`;
-                    } else if (section.type === 'images') {
-                         return; // Skip empty image galleries
-                    }
-                    
-                    outContainer.appendChild(secDiv);
-                });
-
-                switchView('document-view', false);
-
-            } catch (err) {
-                alert("Failed to build preview: " + err.message);
-                console.error(err);
-            } finally {
-                btn.disabled = false;
-                btnText.textContent = "Preview Document";
-                spinner.classList.add('hidden');
-            }
-        }
-        
-        // --- MULTI-PAGE PDF GENERATOR (ATOMIC BLOCK ALGORITHM) ---
-        async function getPdfBlob() {
-            const { jsPDF } = window.jspdf;
-            
-            await new Promise(resolve => setTimeout(resolve, 500));
-
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const margin = 15; 
-            const usableWidth = pdfWidth - (margin * 2);
-            const usableHeight = pdfHeight - (margin * 2);
-            
-            let currentY = margin;
-
-            const header = document.querySelector('#document-output header');
-            const sectionsContainer = document.getElementById('output-sections-container');
-            const sections = Array.from(sectionsContainer.children);
-            
-            const elementsToCapture = [header, ...sections];
-
-            for (let i = 0; i < elementsToCapture.length; i++) {
-                const el = elementsToCapture[i];
-                if (!el) continue;
-
-                const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-                const imgData = canvas.toDataURL('image/jpeg', 0.95);
-                
-                const imgWidthMm = usableWidth;
-                const ratio = usableWidth / canvas.width;
-                const imgHeightMm = canvas.height * ratio;
-
-                if (currentY + imgHeightMm > pdfHeight - margin && currentY > margin) {
-                    pdf.addPage();
-                    currentY = margin;
-                }
-
-                if (imgHeightMm > usableHeight) {
-                    let heightLeft = imgHeightMm;
-                    let sourceY = 0;
-
-                    while (heightLeft > 0) {
-                        if (sourceY > 0) {
-                            pdf.addPage();
-                            currentY = margin;
-                        }
-                        
-                        pdf.addImage(imgData, 'JPEG', margin, currentY - sourceY, imgWidthMm, imgHeightMm);
-                        
-                        heightLeft -= usableHeight;
-                        sourceY += usableHeight;
-                        
-                        if (heightLeft <= 0) {
-                            const renderedHeightOnLastPage = imgHeightMm - (sourceY - usableHeight);
-                            currentY = margin + renderedHeightOnLastPage + 8;
-                        }
-                    }
-                } else {
-                    pdf.addImage(imgData, 'JPEG', margin, currentY, imgWidthMm, imgHeightMm);
-                    currentY += imgHeightMm + 8; 
-                }
-            }
-
-            return pdf.output('blob');
-        }
-
-        function getFormattedFileName() {
-            const today = new Date();
-            const ds = `${today.getFullYear().toString().slice(-2)}${(today.getMonth() + 1).toString().padStart(2, '0')}${today.getDate().toString().padStart(2, '0')}`;
-            const ref = document.getElementById('output-ref').textContent;
-            const title = (document.getElementById('output-title').textContent || 'Untitled').replace(/[\s/]/g, '-');
-            return `${ds}-${title}-${ref}.pdf`;
-        }
-
-        async function downloadPDF() {
-            const btn = document.getElementById('pdf-download-button');
-            const btnText = document.getElementById('pdf-download-text');
-            const spinner = document.getElementById('pdf-download-spinner');
-
-            btn.disabled = true;
-            btnText.textContent = "Processing Pages...";
-            spinner.classList.remove('hidden');
-
-            try {
-                const pdfBlob = await getPdfBlob();
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(pdfBlob);
-                link.download = getFormattedFileName();
-                link.click();
-            } catch (error) { 
-                alert("PDF Error: " + error.message); 
-            } finally { 
-                btn.disabled = false; 
-                btnText.textContent = "Download Multi-Page PDF";
-                spinner.classList.add('hidden');
-            }
-        }
-
-        async function saveToFirebase() {
-            const button = document.getElementById('firebase-save-button');
-            const editingId = document.getElementById('editing-id').value;
-            const btnText = document.getElementById('firebase-save-text');
-            const spinner = document.getElementById('firebase-spinner');
-
-            button.disabled = true;
-            spinner.classList.remove('hidden');
-            btnText.textContent = 'Processing Images...';
-
-            try {
-                const userRefNumber = document.getElementById('output-ref').textContent;
-                if (!editingId && userRefNumber === suggestedRefNumber) {
-                    const counterRef = window.firebase.doc(window.firebase.db, "_config", "releaseCounter");
-                    await window.firebase.runTransaction(window.firebase.db, async (transaction) => {
-                        const counterDoc = await transaction.get(counterRef);
-                        const newCounterValue = (counterDoc.exists() ? counterDoc.data().value : 0) + 1;
-                        transaction.set(counterRef, { value: newCounterValue });
-                    });
-                }
-                
-                const sectionsForDB = JSON.parse(JSON.stringify(documentSections));
-                
-                for (const section of sectionsForDB) {
-                    if (section.type === 'images' && section.images) {
-                        for (let i = 0; i < section.images.length; i++) {
-                            const imgObj = section.images[i];
-                            // Never save the massive temporary preview blobs to the database
-                            delete imgObj.previewSrc; 
-                            
-                            if (imgObj.src && imgObj.src.startsWith('data:image')) {
-                                const fetchRes = await fetch(imgObj.src);
-                                const imgBlob = await fetchRes.blob();
-                                
-                                const imgFileName = `releases/images/${userRefNumber}-${section.id}-${i}.jpg`;
-                                const imgStorageRef = window.firebase.ref(window.firebase.storage, imgFileName);
-                                
-                                await window.firebase.uploadBytes(imgStorageRef, imgBlob);
-                                imgObj.src = await window.firebase.getDownloadURL(imgStorageRef);
-                                imgObj.storagePath = imgStorageRef.fullPath; 
-                            }
-                        }
-                    }
-                }
-                
-                btnText.textContent = 'Saving Document...';
-
-                const releaseData = {
-                    refNumber: userRefNumber,
-                    title: document.getElementById('output-title').textContent,
-                    productsAffected: document.getElementById('output-products').textContent,
-                    category: document.getElementById('output-category').textContent,
-                    releaseDate: document.getElementById('output-releaseDate').textContent,
-                    effectiveDate: document.getElementById('output-effectiveDate').textContent,
-                    sections: sectionsForDB, 
-                    createdAt: window.firebase.serverTimestamp()
-                };
-
-                const pdfBlob = await getPdfBlob();
-                const fileName = getFormattedFileName();
-                const storageRef = window.firebase.ref(window.firebase.storage, `releases/${fileName}`);
-                await window.firebase.uploadBytes(storageRef, pdfBlob);
-                releaseData.pdfUrl = await window.firebase.getDownloadURL(storageRef);
-                releaseData.storagePath = storageRef.fullPath; 
-                
-                if (editingId) {
-                    await window.firebase.updateDoc(window.firebase.doc(window.firebase.db, "releases", editingId), releaseData);
-                } else {
-                    await window.firebase.addDoc(window.firebase.collection(window.firebase.db, "releases"), releaseData);
-                }
-                
-                alert('Saved successfully!');
-                await window.loadHistory(); 
-                switchView('history-view'); 
-                
-            } catch (error) { 
-                console.error(error);
-                alert("Save Error: " + error.message); 
-            } finally { 
-                button.disabled = false;
-                spinner.classList.add('hidden');
-                btnText.textContent = 'Save to Firebase'; 
-            }
-        }
-        
-        window.loadHistory = async function() {
-            const container = document.getElementById('history-results');
-            try {
-                const releasesRef = window.firebase.collection(window.firebase.db, "releases");
-                const q = window.firebase.query(releasesRef, window.firebase.orderBy("createdAt", "desc"));
-                const querySnapshot = await window.firebase.getDocs(q);
-                allReleases = querySnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                displayReleases(allReleases);
-            } catch (error) { 
-                console.error("History Error", error); 
-                if (container) {
-                    container.innerHTML = `<div class="bg-red-50 text-red-700 p-4 rounded-lg border border-red-200">
-                        <p class="font-bold">Could not load history.</p>
-                        <p class="text-sm mt-1 text-red-600">Error: ${error.message}</p>
-                        <p class="text-sm mt-3 font-semibold">Please ensure your <strong>Firestore Database Rules</strong> are enabled and set to allow read/write access.</p>
-                    </div>`;
-                }
-            }
-        }
-
-        function displayReleases(releases) {
-            const container = document.getElementById('history-results');
-            if (releases.length === 0) { container.innerHTML = '<p class="text-gray-500">No releases found.</p>'; return; }
-            container.innerHTML = releases.map(release => `
-                <div class="border border-gray-200 p-4 rounded-lg flex justify-between items-center hover:bg-gray-50">
-                    <div>
-                        <p class="font-bold text-lg text-gray-800">${release.title}</p>
-                        <p class="text-sm text-gray-600">${release.refNumber} | Products: ${release.productsAffected}</p>
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <a href="${release.pdfUrl}" target="_blank" class="bg-green-100 text-green-800 font-semibold py-2 px-3 rounded-lg hover:bg-green-200 transition text-sm">View PDF</a>
-                        <button onclick="editRelease('${release.id}')" class="bg-blue-100 text-blue-800 font-semibold py-2 px-3 rounded-lg hover:bg-blue-200 transition text-sm">Edit</button>
-                        <button onclick="deleteRelease('${release.id}', '${release.storagePath}')" class="bg-red-100 text-red-800 font-semibold py-2 px-3 rounded-lg hover:bg-red-200 transition text-sm">Delete</button>
-                    </div>
-                </div>
-            `).join('');
-        }
-        
-        window.editRelease = function(id) {
-            const release = allReleases.find(r => r.id === id);
-            if (!release) return;
-            document.getElementById('editing-id').value = id;
-            document.getElementById('ref-number-input').value = release.refNumber || '';
-            document.getElementById('productsAffected').value = release.productsAffected || '';
-            document.getElementById('category').value = release.category || 'Motors';
-            document.getElementById('title').value = release.title || '';
-            document.getElementById('effectiveDate').value = release.effectiveDate || '';
-            
-            if (release.sections && Array.isArray(release.sections)) {
-                documentSections = JSON.parse(JSON.stringify(release.sections));
+        function getPerformanceStatus(value, target, lowerIsBetter = false) {
+            const ratio = value / target;
+            let status, text;
+            if (lowerIsBetter) {
+                if (value <= target) status = 'green';
+                else if (value <= target * 1.05) status = 'orange';
+                else status = 'red';
+                text = `${value.toFixed(2)}% vs ${target.toFixed(2)}%`;
             } else {
-                documentSections = [
-                    { id: generateId(), type: 'text', title: 'Overview', content: release.overview || '' },
-                    { id: generateId(), type: 'text', title: 'Details', content: release.details || '' },
-                    { id: generateId(), type: 'text', title: 'Impact and Action Required', content: release.impact || '' }
-                ];
+                if (ratio >= 1) status = 'green';
+                else if (ratio >= 0.9) status = 'orange';
+                else status = 'red';
+                text = `${(ratio * 100).toFixed(0)}% of target`;
             }
-
-            renderSectionsForm();
-            document.getElementById('form-title').textContent = 'Editing Technical Release';
-            switchView('form-view', false);
+            const colorMap = { green: 'text-green-700', orange: 'text-orange-700', red: 'text-red-700' };
+            return { status, text, textColorClass: colorMap[status] };
         }
 
-        window.deleteRelease = async function(id, storagePath) {
-            if (!confirm('Are you sure you want to permanently delete this release AND its associated images?')) return;
-            try {
-                const docRef = window.firebase.doc(window.firebase.db, "releases", id);
-                const docSnap = await window.firebase.getDoc(docRef);
-                
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    if (data.sections) {
-                        for (const section of data.sections) {
-                            if (section.type === 'images' && section.images) {
-                                for (const img of section.images) {
-                                    if (img.storagePath) {
-                                        try {
-                                            await window.firebase.deleteObject(window.firebase.ref(window.firebase.storage, img.storagePath));
-                                        } catch(imgErr) { console.warn("Failed to delete associated image:", imgErr); }
-                                    }
-                                }
-                            }
-                        }
+        function updateCard(prefix, statuses) {
+            const indicator = document.getElementById(`${prefix}-health-indicator`);
+            const textEl = document.getElementById(`${prefix}-health-text`);
+            const colorMap = { green: 'bg-green-500', orange: 'bg-orange-500', red: 'bg-red-500' };
+            const textMap = { green: 'On Track', orange: 'Caution', red: 'Below Target' };
+            let finalStatus = 'green';
+            if (statuses.some(s => s.status === 'red')) finalStatus = 'red';
+            else if (statuses.some(s => s.status === 'orange')) finalStatus = 'orange';
+            indicator.className = `w-8 h-8 rounded-full mr-4 ${colorMap[finalStatus]}`;
+            textEl.textContent = textMap[finalStatus];
+            textEl.className = `text-xl font-semibold ${statuses[0].textColorClass.replace('bg-', 'text-')}`;
+        }
+
+        function getChartOptions(isCurrency = false, unit = '') {
+            return { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'top' }, tooltip: { callbacks: { label: (ctx) => `${ctx.dataset.label || ''}: ${isCurrency ? `R${ctx.parsed.y.toLocaleString('en-ZA')}` : ctx.parsed.y.toFixed(2) + unit}` } } }, scales: { y: { beginAtZero: true, ticks: { callback: (val) => isCurrency ? (val >= 1000000 ? `R${val / 1000000}M` : `R${val / 1000}K`) : val + unit } } } };
+        }
+        
+        // --- SUB-COMPONENT RENDERERS ---
+        function renderHorizontalBarChart(canvasId, rawData, totalValue, threshold) {
+            let mainItems = [];
+            let otherTotal = 0;
+            rawData.forEach(item => {
+                if (Math.abs(item.value) >= threshold) mainItems.push(item);
+                else otherTotal += item.value;
+            });
+            if (otherTotal !== 0) mainItems.push({ category: `Other Misc. Items`, value: otherTotal });
+            mainItems.sort((a, b) => Math.abs(b.value) - Math.abs(a.value));
+
+            const labels = mainItems.map(item => item.category);
+            const values = mainItems.map(item => item.value);
+
+            const options = { indexAxis: 'y', responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false }, datalabels: { anchor: 'end', align: (ctx) => ctx.dataset.data[ctx.dataIndex] >= 0 ? 'end' : 'start', formatter: (val) => `${(val / totalValue * 100).toFixed(1)}%`, color: (ctx) => ctx.dataset.data[ctx.dataIndex] >= 0 ? '#374151' : '#b91c1c', font: { size: 9, weight: '500' } } }, scales: { x: { ticks: { callback: (value) => `R${(value / 1000000).toFixed(1)}M` } } } };
+            chartInstances[canvasId] = new Chart(document.getElementById(canvasId), { type: 'bar', data: { labels, datasets: [{ data: values, backgroundColor: (ctx) => ctx.raw >= 0 ? 'rgba(59, 130, 246, 0.7)' : 'rgba(239, 68, 68, 0.6)' }] }, options });
+        }
+
+        function renderDetailedCharts(data) {
+            if (!data.detailedCostOfSales || data.detailedCostOfSales.length === 0) return;
+            const totalCoS = data.detailedCostOfSales.reduce((sum, item) => sum + item.value, 0);
+            const totalOpEx = data.detailedOtherExpenses.reduce((sum, item) => sum + item.value, 0);
+
+            chartInstances.overallCostStructureChart = new Chart(document.getElementById('overallCostStructureChart'), { type: 'doughnut', data: { labels: ['Total Cost of Sales', 'Total Other Expenses'], datasets: [{ data: [totalCoS, totalOpEx], backgroundColor: ['#8b5cf6', '#d946ef'], hoverOffset: 8 }] }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom' }, datalabels: { formatter: (value, ctx) => { let sum = ctx.chart.data.datasets[0].data.reduce((a, b) => a + b, 0); return (value * 100 / sum).toFixed(1) + "%"; }, color: '#fff' } } } });
+        
+            renderHorizontalBarChart('detailedCostOfSalesChart', data.detailedCostOfSales, totalCoS, 150000);
+            renderHorizontalBarChart('detailedOtherExpensesChart', data.detailedOtherExpenses, totalOpEx, 100000);
+        }
+        
+        function renderProductTrendChart() {
+            const selectedProduct = productSelect.value;
+            if (!selectedProduct) {
+                productChartContainer.classList.add('hidden');
+                return;
+            }
+            const productHistory = [];
+            currentData.productPerformance.forEach(month => {
+                if (month && Array.isArray(month.products)) {
+                    const product = month.products.find(p => p.rangeName === selectedProduct);
+                    if (product) {
+                        productHistory.push({
+                            month: month.month,
+                            costPercentage: product.sales > 0 ? (product.cost / product.sales) * 100 : 0
+                        });
                     }
                 }
+            });
+            productHistory.sort((a, b) => parseMonthYear(a.month) - parseMonthYear(b.month));
+            productChartContainer.classList.remove('hidden');
+            const labels = productHistory.map(p => p.month);
+            const data = productHistory.map(p => p.costPercentage);
+            if (chartInstances.productTrendChart) chartInstances.productTrendChart.destroy();
+            chartInstances.productTrendChart = new Chart(document.getElementById('productTrendChart'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Cost % of Sales',
+                        data,
+                        borderColor: '#4f46e5',
+                        tension: 0.1
+                    }, {
+                        label: 'Target',
+                        data: Array(labels.length).fill(targets.materialCostPercentage),
+                        borderColor: '#f59e0b',
+                        borderDash: [5, 5],
+                        fill: false,
+                        pointRadius: 0
+                    }]
+                },
+                options: getChartOptions(false, 'Cost %')
+            });
+        }
 
-                await window.firebase.deleteDoc(docRef);
-                if (storagePath) await window.firebase.deleteObject(window.firebase.ref(window.firebase.storage, storagePath));
+        function renderProductPerformanceTab(data) {
+            if (!data.productPerformance || data.productPerformance.length === 0) {
+                productSelect.innerHTML = '<option value="">No product data available</option>';
+                return;
+            }
+            const underperformingProducts = new Map();
+            const latestThreeMonths = data.productPerformance.slice(-3);
+            latestThreeMonths.forEach(month => {
+                if (month && Array.isArray(month.products)) {
+                    month.products.forEach(product => {
+                        const productName = product.rangeName.toLowerCase();
+                        if (productName.includes('sample') || productName.includes('components') || productName === 'alterations') {
+                            return; 
+                        }
+                        const costPercentage = product.sales > 0 ? (product.cost / product.sales) * 100 : 0;
+                        if (costPercentage > targets.materialCostPercentage) {
+                            const existing = underperformingProducts.get(product.rangeName);
+                            if (!existing || costPercentage > existing.maxCost) {
+                                underperformingProducts.set(product.rangeName, {
+                                    name: product.rangeName,
+                                    maxCost: costPercentage
+                                });
+                            }
+                        }
+                    });
+                }
+            });
+            const sortedUnderperformers = Array.from(underperformingProducts.values())
+                .sort((a, b) => b.maxCost - a.maxCost);
+            productSelect.innerHTML = ''; 
+            if (sortedUnderperformers.length === 0) {
+                 productSelect.innerHTML = '<option value="">No underperforming products</option>';
+            } else {
+                productSelect.innerHTML = '<option value="">Select a product...</option>';
+                sortedUnderperformers.forEach(product => {
+                    const option = document.createElement('option');
+                    option.value = product.name;
+                    option.textContent = `${product.name} (${product.maxCost.toFixed(1)}% Cost)`;
+                    option.classList.add('text-red-600', 'font-bold');
+                    productSelect.appendChild(option);
+                });
+            }
+            if (data.productPerformanceAnalysis && typeof data.productPerformanceAnalysis === 'string') {
+                productAiInsightsContainer.innerHTML = data.productPerformanceAnalysis.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/[\*#]/g, '');
+                productAiInsightsContainer.classList.remove('hidden');
+            } else {
+                productAiInsightsContainer.classList.add('hidden');
+            }
+        }
+        
+        function renderInventoryTrendChart() {
+            const selectedProduct = inventorySelect.value;
+            if (!selectedProduct) {
+                inventoryChartContainer.classList.add('hidden');
+                return;
+            }
+            const inventoryHistory = [];
+            const inventoryDataSource = (currentData.inventoryData && currentData.inventoryData.length > 0) ? currentData.inventoryData : (currentData.historicalInventoryData || []);
+            inventoryDataSource.forEach(month => {
+                if (month && Array.isArray(month.products)) {
+                    const product = month.products.find(p => p.rangeName === selectedProduct);
+                    if (product) {
+                        inventoryHistory.push({
+                            month: month.month,
+                            value: product.value
+                        });
+                    }
+                }
+            });
+            inventoryHistory.sort((a, b) => parseMonthYear(a.month) - parseMonthYear(b.month));
+            inventoryChartContainer.classList.remove('hidden');
+            const labels = inventoryHistory.map(p => p.month);
+            const data = inventoryHistory.map(p => p.value);
+            if (chartInstances.inventoryTrendChart) chartInstances.inventoryTrendChart.destroy();
+            chartInstances.inventoryTrendChart = new Chart(document.getElementById('inventoryTrendChart'), {
+                type: 'line',
+                data: {
+                    labels,
+                    datasets: [{
+                        label: 'Inventory Value',
+                        data,
+                        borderColor: '#10b981',
+                        tension: 0.1
+                    }]
+                },
+                options: getChartOptions(true)
+            });
+        }
+
+        function renderInventoryPerformanceTab(data) {
+             const inventoryDataSource = (data.inventoryData && data.inventoryData.length > 0) ? data.inventoryData : (data.historicalInventoryData || []);
+            if (inventoryDataSource.length === 0) {
+                inventorySelect.innerHTML = '<option value="">No inventory data available</option>';
+                inventoryAiInsightsContainer.classList.add('hidden');
+                return;
+            }
+            const allProducts = new Set();
+            inventoryDataSource.forEach(month => {
+                if (month && Array.isArray(month.products)) {
+                    month.products.forEach(product => allProducts.add(product.rangeName));
+                }
+            });
+            const sortedProducts = Array.from(allProducts).sort();
+            inventorySelect.innerHTML = '<option value="">Select a product...</option>';
+            sortedProducts.forEach(productName => {
+                const option = document.createElement('option');
+                option.value = productName;
+                option.textContent = productName;
+                inventorySelect.appendChild(option);
+            });
+            if (data.inventoryAnalysis && typeof data.inventoryAnalysis === 'string') {
+                inventoryAiInsightsContainer.innerHTML = data.inventoryAnalysis.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/[\*#]/g, '');
+                inventoryAiInsightsContainer.classList.remove('hidden');
+            } else {
+                inventoryAiInsightsContainer.classList.add('hidden');
+            }
+        }
+
+        function renderHealthDashboard(data) {
+            const latestMonth = data.monthlyData && data.monthlyData.length > 0 ? data.monthlyData[data.monthlyData.length - 1] : null;
+            if (!latestMonth) {
+                document.getElementById('latest-month-label').textContent = "N/A";
+                return;
+            }
+            document.getElementById('latest-month-label').textContent = latestMonth.month;
+            const avgMonthlyProfitTarget = targets.annualProfit / 12;
+            const latestMonthProfitMargin = (latestMonth.revenue > 0) ? (latestMonth.netProfit / latestMonth.revenue) * 100 : 0;
+            const latestMonthMaterialCostValue = (latestMonth.materialCosts && latestMonth.materialCosts !== 0) ? latestMonth.materialCosts : (latestMonth.costOfGoodsSold || 0);
+            const latestMonthMaterialCostPerc = (latestMonth.revenue > 0) ? (latestMonthMaterialCostValue / latestMonth.revenue) * 100 : 0;
+            const ytdData = getFinancialYearData(data.monthlyData);
+            const ytdTotalRevenue = ytdData.reduce((s, i) => s + (i.revenue || 0), 0);
+            const ytdTotalProfit = ytdData.reduce((s, i) => s + (i.netProfit || 0), 0);
+            const ytdTotalMaterialCosts = ytdData.reduce((s, i) => {
+                const mc = (i.materialCosts && i.materialCosts !== 0) ? i.materialCosts : (i.costOfGoodsSold || 0);
+                return s + mc;
+            }, 0);
+            const ytdProfitMargin = (ytdTotalRevenue > 0) ? (ytdTotalProfit / ytdTotalRevenue) * 100 : 0;
+            const ytdMaterialCostPerc = (ytdTotalRevenue > 0) ? (ytdTotalMaterialCosts / ytdTotalRevenue) * 100 : 0;
+            const monthProfitStatus = getPerformanceStatus(latestMonth.netProfit, avgMonthlyProfitTarget);
+            const monthMarginStatus = getPerformanceStatus(latestMonthProfitMargin, targets.profitMargin);
+            const monthMaterialStatus = getPerformanceStatus(latestMonthMaterialCostPerc, targets.materialCostPercentage, true);
+            const ytdMarginStatus = getPerformanceStatus(ytdProfitMargin, targets.profitMargin);
+            const ytdMaterialStatus = getPerformanceStatus(ytdMaterialCostPerc, targets.materialCostPercentage, true);
+            updateCard('current-month', [monthProfitStatus, monthMarginStatus, monthMaterialStatus]);
+            document.getElementById('current-month-profit-status').textContent = monthProfitStatus.text;
+            document.getElementById('current-month-profit-status').className = `font-medium ${monthProfitStatus.textColorClass}`;
+            document.getElementById('current-month-margin-status').textContent = monthMarginStatus.text;
+            document.getElementById('current-month-margin-status').className = `font-medium ${monthMarginStatus.textColorClass}`;
+            document.getElementById('current-month-material-cost-status').textContent = monthMaterialStatus.text;
+            document.getElementById('current-month-material-cost-status').className = `font-medium ${monthMaterialStatus.textColorClass}`;
+            updateCard('ytd', [ytdMarginStatus, ytdMaterialStatus]);
+            document.getElementById('ytd-margin-status').textContent = ytdMarginStatus.text;
+            document.getElementById('ytd-margin-status').className = `font-medium ${ytdMarginStatus.textColorClass}`;
+            document.getElementById('ytd-material-cost-status').textContent = ytdMaterialStatus.text;
+            document.getElementById('ytd-material-cost-status').className = `font-medium ${ytdMaterialStatus.textColorClass}`;
+        }
+        
+        function renderKpiProgressBars(fullData, profitForView, marginForView, materialCostPercForView) {
+            const isYtdView = currentViewMode === 'ytd';
+            const ytdProfit = getFinancialYearData(fullData.monthlyData).reduce((sum, item) => sum + (item.netProfit || 0), 0);
+            const progressPercentage = (ytdProfit / targets.annualProfit) * 100;
+            document.getElementById('progress-percentage').textContent = `${progressPercentage.toFixed(1)}%`;
+            document.getElementById('progress-bar').style.width = `${Math.min(progressPercentage, 100)}%`;
+            document.getElementById('kpi-target-profit').textContent = `R${targets.annualProfit.toLocaleString('en-ZA')}`;
+            document.getElementById('kpi-profit-title').textContent = isYtdView ? 'Progress to Annual Target' : 'Total Net Profit (All Time)';
+            document.getElementById('kpi-profit-progress-container').style.display = isYtdView ? 'block' : 'none';
+            const marginIndicatorEl = document.getElementById('margin-indicator');
+            const marginBarEl = document.getElementById('margin-bar');
+            document.getElementById('kpi-margin-title').textContent = isYtdView ? 'YTD Profit Margin' : 'Avg. Profit Margin (All Time)';
+            if (marginForView >= targets.profitMargin) {
+                marginIndicatorEl.textContent = 'Above Target'; marginIndicatorEl.className = 'font-semibold text-teal-600';
+                marginBarEl.className = 'h-3 rounded-full bg-teal-500';
+            } else {
+                marginIndicatorEl.textContent = 'Below Target'; marginIndicatorEl.className = 'font-semibold text-red-600';
+                marginBarEl.className = 'h-3 rounded-full bg-red-500';
+            }
+            const marginScaleMaxVisual = Math.max(marginForView, targets.profitMargin) * 1.1; 
+            marginBarEl.style.width = `${(marginForView / marginScaleMaxVisual) * 100}%`;
+            document.getElementById('margin-target-line').style.left = `${(targets.profitMargin / marginScaleMaxVisual) * 100}%`;
+            document.getElementById('kpi-margin-target').textContent = `${targets.profitMargin.toFixed(2)}%`;
+            const materialCostIndicatorEl = document.getElementById('material-cost-indicator');
+            const materialCostBarEl = document.getElementById('material-cost-bar');
+            document.getElementById('kpi-material-cost-title').textContent = isYtdView ? 'YTD Material Costs %' : 'Avg. Material Costs % (All Time)';
+            if (materialCostPercForView <= targets.materialCostPercentage) { 
+                materialCostIndicatorEl.textContent = 'Below Target'; materialCostIndicatorEl.className = 'font-semibold text-green-600';
+                materialCostBarEl.className = 'h-3 rounded-full bg-green-500';
+            } else { 
+                materialCostIndicatorEl.textContent = 'Above Target'; materialCostIndicatorEl.className = 'font-semibold text-red-600';
+                materialCostBarEl.className = 'h-3 rounded-full bg-red-500';
+            }
+            const materialCostScaleMaxVisual = Math.max(materialCostPercForView, targets.materialCostPercentage) * 1.1;
+            materialCostBarEl.style.width = `${(materialCostPercForView / materialCostScaleMaxVisual) * 100}%`;
+            document.getElementById('material-cost-target-line').style.left = `${(targets.materialCostPercentage / materialCostScaleMaxVisual) * 100}%`;
+            document.getElementById('kpi-material-cost-target').textContent = `${targets.materialCostPercentage.toFixed(2)}%`;
+        }
+
+        // --- MAIN DASHBOARD RENDERERS ---
+        function destroyAllCharts() {
+            Object.values(chartInstances).forEach(chart => chart.destroy());
+            chartInstances = {};
+        }
+
+        function setViewMode(mode) {
+            currentViewMode = mode;
+            viewYtdBtn.classList.toggle('bg-indigo-600', mode === 'ytd');
+            viewYtdBtn.classList.toggle('text-white', mode === 'ytd');
+            viewAllBtn.classList.toggle('bg-indigo-600', mode === 'all');
+            viewAllBtn.classList.toggle('text-white', mode === 'all');
+            viewCompareBtn.classList.toggle('bg-indigo-600', mode === 'compare');
+            viewCompareBtn.classList.toggle('text-white', mode === 'compare');
+            
+            if (!currentData) return;
+
+            if (mode === 'compare') {
+                dashboardTitle.textContent = "Dashboard & Analysis (Yearly Comparison)";
+                renderComparisonCharts(currentData);
+            } else {
+                renderDashboard(currentData);
+            }
+        }
+
+        function renderComparisonCharts(fullData) {
+            destroyAllCharts();
+            errorSection.classList.add('hidden');
+            chartTitleLeft.textContent = "Year-over-Year Net Profit Comparison";
+            chartTitleRight.textContent = "Year-over-Year Revenue Comparison";
+
+            const monthLabels = ["March", "April", "May", "June", "July", "August", "September", "October", "November", "December", "January", "February"];
+            const yearDatasetsProfit = {};
+            const yearDatasetsRevenue = {};
+            
+            const yearColors = {
+                2023: '#94a3b8', // gray
+                2024: '#60a5fa', // blue
+                2025: '#4f46e5', // indigo (current/main)
+                2026: '#10b981', // emerald
+                2027: '#f59e0b'  // amber
+            };
+
+            fullData.monthlyData.forEach(item => {
+                const date = parseMonthYear(item.month);
+                if (!date) return;
+                const monthIndex = date.getUTCMonth(); // 0 = Jan
+                const calendarYear = date.getUTCFullYear();
+                const fyYear = monthIndex < 2 ? calendarYear : calendarYear + 1;
                 
-                alert('Release deleted entirely.');
-                await loadHistory();
-            } catch (error) { alert("Delete Error: " + error.message); }
+                if (!yearDatasetsProfit[fyYear]) {
+                    yearDatasetsProfit[fyYear] = new Array(12).fill(null);
+                    yearDatasetsRevenue[fyYear] = new Array(12).fill(null);
+                }
+                const chartIndex = monthIndex < 2 ? monthIndex + 10 : monthIndex - 2;
+                yearDatasetsProfit[fyYear][chartIndex] = item.netProfit;
+                yearDatasetsRevenue[fyYear][chartIndex] = item.revenue;
+            });
+
+            const profitDatasets = Object.keys(yearDatasetsProfit).sort().map(year => ({
+                label: `FY ${year}`,
+                data: yearDatasetsProfit[year],
+                borderColor: yearColors[year] || '#333',
+                backgroundColor: (yearColors[year] || '#333') + '20', 
+                tension: 0.3,
+                fill: false
+            }));
+
+            const revenueDatasets = Object.keys(yearDatasetsRevenue).sort().map(year => ({
+                label: `FY ${year}`,
+                data: yearDatasetsRevenue[year],
+                backgroundColor: yearColors[year] || '#333',
+                borderRadius: 4
+            }));
+
+            chartInstances.netProfitChart = new Chart(document.getElementById('netProfitChart'), {
+                type: 'line',
+                data: {
+                    labels: monthLabels,
+                    datasets: profitDatasets
+                },
+                options: getChartOptions(true)
+            });
+
+            chartInstances.revenueVsCostChart = new Chart(document.getElementById('revenueVsCostChart'), {
+                type: 'bar',
+                data: {
+                    labels: monthLabels,
+                    datasets: revenueDatasets
+                },
+                options: getChartOptions(true)
+            });
+            
+            renderDetailedCharts(fullData);
+            renderProductPerformanceTab(fullData);
+            renderInventoryPerformanceTab(fullData);
         }
 
-        window.searchReleases = function() {
-            const term = document.getElementById('search-input').value.toLowerCase();
-            if (!term) { displayReleases(allReleases); return; }
-            const filtered = allReleases.filter(r => (r.title && r.title.toLowerCase().includes(term)) || (r.refNumber && r.refNumber.toLowerCase().includes(term)));
-            displayReleases(filtered);
+        function renderDashboard(fullData) {
+            destroyAllCharts();
+            errorSection.classList.add('hidden');
+
+            const isYtdView = currentViewMode === 'ytd';
+            const dataForView = isYtdView ? getFinancialYearData(fullData.monthlyData) : fullData.monthlyData;
+            
+            const ytdDataForTitle = getFinancialYearData(fullData.monthlyData);
+            const startYear = ytdDataForTitle.length > 0 ? parseMonthYear(ytdDataForTitle[0].month).getUTCFullYear() : getFinancialYearStartYear();
+            
+            dashboardTitle.textContent = `Dashboard & Analysis (${isYtdView ? `FY ${startYear + 1} YTD` : 'All Time'})`;
+            chartTitleLeft.textContent = "Monthly Net Profit Trend";
+            chartTitleRight.textContent = "Monthly Revenue vs. Costs";
+
+            const totalRevenueForView = dataForView.reduce((sum, item) => sum + (item.revenue || 0), 0);
+            const totalProfitForView = dataForView.reduce((sum, item) => sum + (item.netProfit || 0), 0);
+            const totalMaterialCostsForView = dataForView.reduce((sum, item) => {
+                const mc = (item.materialCosts && item.materialCosts !== 0) ? item.materialCosts : (item.costOfGoodsSold || 0);
+                return sum + mc;
+            }, 0);
+            
+            const marginForView = (totalRevenueForView > 0) ? (totalProfitForView / totalRevenueForView) * 100 : 0;
+            const materialCostPercForView = (totalRevenueForView > 0) ? (totalMaterialCostsForView / totalRevenueForView) * 100 : 0;
+
+            document.getElementById('kpi-projected-profit').textContent = `R${calculateProjectedProfit(fullData).toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('kpi-ytd-profit').textContent = `R${totalProfitForView.toLocaleString('en-ZA', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+            document.getElementById('kpi-ytd-margin').textContent = `${marginForView.toFixed(2)}%`;
+            document.getElementById('kpi-material-cost-percentage').textContent = `${materialCostPercForView.toFixed(2)}%`;
+            if (fullData.financialPosition && fullData.financialPosition.currentLiabilities) {
+                document.getElementById('kpi-current-ratio').textContent = (fullData.financialPosition.currentLiabilities > 0) ? (fullData.financialPosition.currentAssets / fullData.financialPosition.currentLiabilities).toFixed(2) : '0.00';
+            }
+            document.getElementById('ai-analysis').innerHTML = fullData.aiAnalysis || "";
+            
+            renderHealthDashboard(fullData);
+            renderKpiProgressBars(fullData, totalProfitForView, marginForView, materialCostPercForView);
+
+            if (dataForView && dataForView.length > 0) {
+                const labels = dataForView.map(d => d.month);
+                const avgProfit = dataForView.length > 0 ? totalProfitForView / dataForView.length : 0;
+                const avgRevenue = dataForView.length > 0 ? totalRevenueForView / dataForView.length : 0;
+                const monthlyProfitTarget = targets.annualProfit / 12;
+
+                chartInstances.netProfitChart = new Chart(document.getElementById('netProfitChart'), { type: 'line', data: { labels, datasets: [ { label: 'Net Profit', data: dataForView.map(d => d.netProfit), borderColor: '#4f46e5', backgroundColor: 'rgba(79, 70, 229, 0.1)', fill: true, tension: 0.3 }, { label: 'Avg. Profit', data: Array(labels.length).fill(avgProfit), borderColor: '#10b981', borderDash: [5, 5], fill: false, pointRadius: 0 }, { label: 'Target', data: Array(labels.length).fill(monthlyProfitTarget), borderColor: '#f59e0b', borderDash: [5, 5], fill: false, pointRadius: 0 } ] }, options: getChartOptions(true) });
+                chartInstances.revenueVsCostChart = new Chart(document.getElementById('revenueVsCostChart'), { type: 'bar', data: { labels, datasets: [{ label: 'Total Revenue', data: dataForView.map(d => d.revenue), backgroundColor: 'rgba(16, 185, 129, 0.7)', type: 'bar' }, { label: 'Total Costs', data: dataForView.map(d => (d.costOfSales || 0) + (d.otherExpenses || 0)), backgroundColor: 'rgba(239, 68, 68, 0.7)', type: 'bar' }, { label: 'Avg. Revenue', data: Array(labels.length).fill(avgRevenue), borderColor: '#3b82f6', borderDash: [5, 5], fill: false, pointRadius: 0, type: 'line' }] }, options: getChartOptions(true) });
+            }
+            
+            renderDetailedCharts(fullData);
+            renderProductPerformanceTab(fullData);
+            renderInventoryPerformanceTab(fullData);
         }
 
-        async function switchView(viewId, reset = true) {
-            ['form-view', 'history-view', 'document-view'].forEach(id => document.getElementById(id).classList.add('hidden'));
-            document.getElementById(viewId).classList.remove('hidden');
-            ['generator-tab-button', 'history-tab-button'].forEach(id => document.getElementById(id).classList.remove('active'));
-            if (viewId === 'form-view' || viewId === 'document-view') document.getElementById('generator-tab-button').classList.add('active');
-            else if (viewId === 'history-view') document.getElementById('history-tab-button').classList.add('active');
-            if (viewId === 'form-view' && reset) await startNewRelease(false);
+        // --- GET FINANCIAL ANALYSIS ---
+        async function getFinancialAnalysis(fileParts) {
+            const prompt = `
+                You are a senior financial consultant. Analyze the provided financial documents. 
+                Your response MUST be a single, valid JSON object matching this schema:
+                {
+                  "monthlyData": [ { "month": "Month Year", "revenue": 12345.67, "costOfSales": 1234.56, "costOfGoodsSold": 1234.56, "materialCosts": 900.00, "otherExpenses": 123.45, "netProfit": 12345.67 } ],
+                  "detailedCostOfSales": [ { "category": "Expense Name", "value": 12345.67 } ],
+                  "detailedOtherExpenses": [ { "category": "Expense Name", "value": 12345.67 } ],
+                  "productPerformance": [ { "month": "Month Year", "products": [ { "rangeName": "Product Name", "sales": 12345.67, "cost": 1234.56 } ] } ],
+                  "inventoryData": [ { "month": "Month Year", "products": [ { "rangeName": "Product Name", "value": 12345.67 } ] } ],
+                  "aiAnalysis": "Executive summary of performance, KPIs, profitability, and recommendations.",
+                  "productPerformanceAnalysis": "Summary of product trends, problems, and high performers.",
+                  "inventoryAnalysis": "Summary of inventory health and trends."
+                }
+                Extract data for every month found. Ensure materialCosts is extracted separately if possible.
+            `;
+
+            const geminiPayload = {
+                contents: [{ parts: [{ text: prompt }, ...fileParts] }],
+                generationConfig: { responseMimeType: "application/json" }
+            };
+            
+            const proxyPayload = { model: 'gemini-3-pro-preview', payload: geminiPayload };
+
+            // --- CIRCUIT BREAKER / RETRY LOGIC ---
+            let response;
+            let resultText;
+            const maxRetries = 5;
+            let delay = 1000; // Start with 1s delay
+
+            for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                try {
+                    response = await fetch(PROXY_API_URL, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(proxyPayload)
+                    });
+
+                    resultText = await response.text();
+
+                    if (response.ok) {
+                        break; // Success!
+                    }
+
+                    // Only retry on certain server/rate-limit errors
+                    if (response.status === 503 || response.status === 429 || response.status >= 500) {
+                        if (attempt === maxRetries) {
+                             throw new Error(`API Request failed: ${response.status} - ${resultText}`);
+                        }
+                        console.warn(`Analysis API attempt ${attempt} failed with ${response.status}. Retrying in ${delay/1000}s...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2; // Exponential backoff (1s, 2s, 4s, 8s, 16s)
+                    } else {
+                         // Don't retry 4xx errors like 400 Bad Request
+                         throw new Error(`API Request failed: ${response.status} - ${resultText}`);
+                    }
+
+                } catch (error) {
+                    if (attempt === maxRetries) {
+                         throw error;
+                    }
+                    console.warn(`Analysis API network error attempt ${attempt}: ${error.message}. Retrying in ${delay/1000}s...`);
+                    await new Promise(resolve => setTimeout(resolve, delay));
+                    delay *= 2;
+                }
+            }
+            
+            try {
+                const result = JSON.parse(resultText);
+                if (result.candidates?.[0]?.content?.parts?.[0]) {
+                    return JSON.parse(result.candidates[0].content.parts[0].text);
+                } else {
+                    throw new Error("Invalid response structure from Gemini API.");
+                }
+            } catch (parseError) {
+                 throw new Error("Failed to parse API response as JSON. The proxy may have returned an HTML error page.");
+            }
         }
 
-        async function startNewRelease(switchToForm = true) {
-            document.getElementById('editing-id').value = '';
-            document.getElementById('form-title').textContent = 'Technical Release Generator';
-            document.getElementById('productsAffected').value = '';
-            document.getElementById('category').value = 'Motors';
-            document.getElementById('title').value = '';
-            document.getElementById('effectiveDate').value = '';
-            initDefaultSections();
-            await updateRefDisplay();
-            if (switchToForm) switchView('form-view', false);
+        // --- DATA LOGIC: MERGE, SAVE, CLEAR, PROCESS ---
+
+        function mergeFinancialData(existingData, newData) {
+            if (!existingData) return newData;
+            const merged = { ...existingData };
+            for (const key in newData) {
+                if (Array.isArray(newData[key]) && newData[key].length > 0) {
+                    const map = new Map((merged[key] || []).map(item => [item.month, item]));
+                    newData[key].forEach(item => map.set(item.month, item));
+                    merged[key] = Array.from(map.values()).sort((a, b) => parseMonthYear(a.month) - parseMonthYear(b.month));
+                } else if (newData[key] !== null && typeof newData[key] === 'object' && !Array.isArray(newData[key])) {
+                    merged[key] = { ...(merged[key] || {}), ...newData[key] };
+                } else if (newData[key] !== undefined) {
+                     merged[key] = newData[key];
+                }
+            }
+            return merged;
         }
 
-        async function handleGeneratorTabClick() {
-            if (!document.getElementById('editing-id').value) await startNewRelease(true);
-            else switchView('form-view', false);
+        async function saveData(analysisData) {
+            if (!window.currentAppId) return;
+            const docRef = doc(db, `artifacts/${window.currentAppId}/public/data/dashboard/latest`);
+            const dataToSave = { ...analysisData, historicalInventoryData }; 
+            await setDoc(docRef, { analysis: dataToSave, lastUpdated: new Date() });
         }
+
+        async function clearAllData() {
+            if (!confirm("Are you sure you want to delete ALL dashboard data AND the stored PDF documents? This action cannot be undone.")) return;
+            showStatus("Deleting all data from Firestore and Storage...");
+            try {
+                const deleteFilePromises = fileCatalogue.map(file => {
+                    const fileRef = ref(storage, file.gsUri);
+                    return deleteObject(fileRef).catch(e => console.warn("File delete failed", e)); 
+                });
+                await Promise.all(deleteFilePromises);
+                const batch = writeBatch(db);
+                const dashboardDocRef = doc(db, `artifacts/${window.currentAppId}/public/data/dashboard/latest`);
+                batch.delete(dashboardDocRef);
+                const settingsDocRef = doc(db, `artifacts/${window.currentAppId}/public/data/settings`);
+                batch.delete(settingsDocRef);
+                fileCatalogue.forEach(file => {
+                    const docRef = doc(db, `artifacts/${window.currentAppId}/public/data/documents`, file.id);
+                    batch.delete(docRef);
+                });
+                await batch.commit();
+                statusSection.classList.add('hidden'); 
+            } catch (error) {
+                console.error("Error clearing data:", error);
+                showError(`Failed to clear all data: ${error.message}`);
+            }
+        }
+
+        async function processFiles() {
+            if (uploadedFiles.length === 0) return showError("Please upload at least one PDF file.");
+            errorSection.classList.add('hidden');
+            if (!window.currentAppId) {
+                 try {
+                    window.currentAppId = JSON.parse(__firebase_config).appId;
+                 } catch(e) {
+                    return showError("Configuration Error: App ID not found. Please refresh.");
+                 }
+            }
+
+            try {
+                for (let i = 0; i < uploadedFiles.length; i++) {
+                    const file = uploadedFiles[i];
+                    const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
+                    
+                    showStatus(`Uploading file ${i + 1} of ${uploadedFiles.length}: ${file.name}...`);
+                    
+                    try {
+                         const storageRef = ref(storage, `artifacts/${window.currentAppId}/documents/${sanitizedName}`);
+                        await uploadBytes(storageRef, file);
+                        
+                        const gsUri = `gs://${JSON.parse(__firebase_config).storageBucket}/artifacts/${window.currentAppId}/documents/${sanitizedName}`;
+                        
+                        const docCollectionRef = collection(db, `artifacts/${window.currentAppId}/public/data/documents`);
+                        await addDoc(docCollectionRef, {
+                            name: sanitizedName,
+                            gsUri: gsUri,
+                            createdAt: new Date(),
+                        });
+                    } catch (error) {
+                        console.error(`Failed to upload ${file.name}:`, error);
+                         if (error.code === 'storage/unauthorized') {
+                             throw new Error(`Permission denied uploading ${file.name}. Please check security rules.`);
+                         } else if (error.code === 'storage/retry-limit-exceeded') {
+                             throw new Error(`Connection timed out uploading ${file.name}. Check your internet connection.`);
+                         } else {
+                             throw new Error(`Error uploading ${file.name}: ${error.message}`);
+                         }
+                    }
+                }
+                showStatus(`All ${uploadedFiles.length} files uploaded. Sending to AI for analysis...`);
+                const fileParts = [];
+                for (let i = 0; i < uploadedFiles.length; i++) {
+                    const file = uploadedFiles[i];
+                    showStatus(`Reading file ${i + 1} of ${uploadedFiles.length} for analysis...`);
+                    const base64Data = await new Promise((resolve, reject) => {
+                        const reader = new FileReader();
+                        reader.onloadend = () => resolve(reader.result.split(',')[1]);
+                        reader.onerror = reject;
+                        reader.readAsDataURL(file);
+                    });
+                    fileParts.push({ inlineData: { mimeType: file.type, data: base64Data } });
+                }
+                showStatus("AI is analyzing the documents... (This may take a minute)");
+                const newAnalysis = await getFinancialAnalysis(fileParts);
+                showStagingArea(newAnalysis);
+
+            } catch (e) {
+                console.error("Processing error:", e);
+                showError(`An error occurred: ${e.message}`);
+            }
+        }
+
+        // --- SETTINGS & STAGING ---
+
+        async function loadSettings(appId) {
+            try {
+                const docRef = doc(db, `artifacts/${appId}/public/data/settings`);
+                const docSnap = await getDoc(docRef);
+                if (docSnap.exists()) {
+                    const savedTargets = docSnap.data();
+                    targets = { ...targets, ...savedTargets };
+                }
+            } catch (e) {
+                console.warn("Could not load settings, using defaults.", e);
+            }
+        }
+
+        async function saveSettings() {
+            const newAnnualProfit = parseFloat(inputAnnualProfit.value);
+            const newProfitMargin = parseFloat(inputProfitMargin.value);
+            const newMaterialCost = parseFloat(inputMaterialCost.value);
+
+            if (isNaN(newAnnualProfit) || isNaN(newProfitMargin) || isNaN(newMaterialCost)) {
+                alert("Please enter valid numeric values.");
+                return;
+            }
+
+            targets = {
+                annualProfit: newAnnualProfit,
+                profitMargin: newProfitMargin,
+                materialCostPercentage: newMaterialCost
+            };
+
+            try {
+                const docRef = doc(db, `artifacts/${window.currentAppId}/public/data/settings`);
+                await setDoc(docRef, targets);
+                settingsModal.classList.add('hidden');
+                if (currentData) renderDashboard(currentData);
+            } catch (e) {
+                alert("Failed to save settings: " + e.message);
+            }
+        }
+        
+        function showStagingArea(analysisData) {
+            stagedAnalysisData = analysisData;
+            const latestMonthData = analysisData.monthlyData && analysisData.monthlyData.length > 0 
+                ? analysisData.monthlyData[analysisData.monthlyData.length - 1] 
+                : null;
+
+            if (latestMonthData) {
+                reviewMonth.value = latestMonthData.month || "Unknown";
+                reviewRevenue.value = latestMonthData.revenue || 0;
+                reviewCos.value = latestMonthData.costOfSales || latestMonthData.costOfGoodsSold || 0;
+                reviewOpex.value = latestMonthData.otherExpenses || 0;
+                reviewProfit.value = latestMonthData.netProfit || 0;
+                reviewMaterial.value = latestMonthData.materialCosts || 0;
+            } else {
+                reviewMonth.value = "No monthly data found";
+            }
+            statusSection.classList.add('hidden');
+            stagingModal.classList.remove('hidden');
+        }
+
+        async function commitStagedData() {
+            if (!stagedAnalysisData) return;
+            const latestIndex = stagedAnalysisData.monthlyData.length - 1;
+            if (latestIndex >= 0) {
+                const editedMonth = stagedAnalysisData.monthlyData[latestIndex];
+                editedMonth.month = reviewMonth.value;
+                editedMonth.revenue = parseFloat(reviewRevenue.value);
+                editedMonth.costOfSales = parseFloat(reviewCos.value);
+                editedMonth.costOfGoodsSold = parseFloat(reviewCos.value); 
+                editedMonth.otherExpenses = parseFloat(reviewOpex.value);
+                editedMonth.netProfit = parseFloat(reviewProfit.value);
+                editedMonth.materialCosts = parseFloat(reviewMaterial.value);
+                stagedAnalysisData.monthlyData[latestIndex] = editedMonth;
+            }
+            showStatus("Merging and saving validated data...");
+            stagingModal.classList.add('hidden');
+            const mergedData = mergeFinancialData(currentData, stagedAnalysisData);
+            try {
+                await saveData(mergedData);
+                stagedAnalysisData = null;
+                uploadedFiles = [];
+                updateFileList();
+                uploadSection.classList.add('hidden'); 
+            } catch (e) {
+                showError("Failed to save data: " + e.message);
+            }
+        }
+
+        // --- FIRESTORE REALTIME LISTENERS ---
+        function setupRealtimeListeners(appId) {
+            if (unsubscribeDashboard) unsubscribeDashboard();
+            if (unsubscribeCatalogue) unsubscribeCatalogue();
+
+            const dashboardDocRef = doc(db, `artifacts/${appId}/public/data/dashboard/latest`);
+            const documentsColRef = collection(db, `artifacts/${appId}/public/data/documents`);
+
+            unsubscribeDashboard = onSnapshot(dashboardDocRef, (docSnap) => {
+                statusSection.classList.add('hidden');
+                if (docSnap.exists()) {
+                    currentData = docSnap.data().analysis;
+                    setViewMode('ytd');
+                    dashboardSection.classList.remove('hidden');
+                } else {
+                    currentData = {
+                        inventoryData: historicalInventoryData,
+                        monthlyData: [],
+                        productPerformance: [],
+                        detailedCostOfSales: [],
+                        detailedOtherExpenses: [],
+                        aiAnalysis: "Please upload your financial documents to begin analysis.",
+                        productPerformanceAnalysis: "No product performance data available.",
+                        inventoryAnalysis: "Historical inventory data loaded. Upload financial documents for a complete analysis."
+                    };
+                    saveData(currentData);
+                    uploadSection.classList.remove('hidden');
+                }
+            }, (error) => {
+                console.error("Firestore dashboard listener error:", error);
+                handleFirestoreError(error);
+            });
+
+            unsubscribeCatalogue = onSnapshot(documentsColRef, (querySnapshot) => {
+                fileCatalogue = [];
+                querySnapshot.forEach((doc) => {
+                    fileCatalogue.push({ id: doc.id, ...doc.data() });
+                });
+                renderCatalogue(fileCatalogue);
+                catalogueSection.classList.toggle('hidden', fileCatalogue.length === 0);
+            }, (error) => {
+                console.error("Firestore documents listener error:", error);
+                handleFirestoreError(error);
+            });
+        }
+        
+        function handleFirestoreError(error) {
+            if (error.code === 'permission-denied') {
+                const errorMessage = `Firestore Permission Error: The application is not allowed to access the database.
+                \nThis is likely due to incorrect Firestore Security Rules. Please go to your Firebase Console -> Firestore Database -> Rules tab and ensure they are set to allow public access.
+                \nThe correct rules for a public dashboard are:
+                \nrules_version = '2';
+                service cloud.firestore {
+                  match /databases/{database}/documents {
+                    match /artifacts/${appId}/public/data/{path=**} {
+                      allow read, write: if request.auth != null;
+                    }
+                  }
+                }
+                \nAlso ensure your Firebase Storage rules are set correctly under Storage -> Rules:
+                \nrules_version = '2';
+                service firebase.storage {
+                  match /b/{bucket}/o {
+                    match /artifacts/{appId}/{path=**} {
+                      allow read, write: if request.auth != null;
+                    }
+                  }
+                }`;
+                showError(errorMessage);
+            } else {
+                showError("Could not listen for data updates: " + error.message);
+            }
+        }
+        
+        function renderCatalogue(files) {
+            catalogueFileList.innerHTML = '';
+            if (files.length === 0) {
+                catalogueFileList.innerHTML = '<p>No documents stored yet. Upload your financial PDFs to begin.</p>';
+                return;
+            }
+            files.sort((a, b) => a.name.localeCompare(b.name));
+            files.forEach(file => {
+                const fileDiv = document.createElement('div');
+                fileDiv.className = 'bg-gray-100 p-3 rounded-lg flex items-center space-x-3';
+                fileDiv.innerHTML = `
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-500 flex-shrink-0" viewBox="0 0 20 20" fill="currentColor">
+                      <path fill-rule="evenodd" d="M4 2a2 2 0 00-2 2v12a2 2 0 002 2h12a2 2 0 002-2V8.414a1 1 0 00-.293-.707l-4.414-4.414A1 1 0 0011.586 3H4zm3 9a1 1 0 00-1 1v1a1 1 0 001 1h8a1 1 0 001-1v-1a1 1 0 00-1-1H7z" clip-rule="evenodd" />
+                    </svg>
+                    <span class="truncate" title="${file.name}">${file.name}</span>
+                `;
+                catalogueFileList.appendChild(fileDiv);
+            });
+        }
+
+        // --- CHATBOT & UTILS ---
+
+        async function handleChatSubmit() {
+            const userQuery = chatInput.value.trim();
+            if (!userQuery) return;
+            if (!currentData) {
+                 addChatMessage("I can't answer questions until you've added some data.", 'bot');
+                 return;
+            }
+
+            addChatMessage(userQuery, 'user');
+            chatInput.value = '';
+            const botMessageDiv = addChatMessage('...', 'bot');
+            try {
+                const prompt = `You are a helpful financial assistant for Blind Designs. 
+                **Business Context:**
+                - The financial year runs from March 1st to the end of February.
+                - Key Targets: Annual Profit R${targets.annualProfit.toLocaleString('en-ZA')}, Margin ${targets.profitMargin}%, Material Cost ${targets.materialCostPercentage}%.
+                **Data Source:**
+                Answer based ONLY on the structured JSON data below.
+                JSON Data: ${JSON.stringify(currentData)}
+                **User Question:** ${userQuery}`;
+
+                const geminiPayload = { contents: [{ parts: [{ text: prompt }] }] };
+                const proxyPayload = { model: 'gemini-3-pro-preview', payload: geminiPayload };
+                
+                // --- CHAT RETRY LOGIC ---
+                let response;
+                let resultText;
+                const maxRetries = 5;
+                let delay = 1000;
+
+                for (let attempt = 1; attempt <= maxRetries; attempt++) {
+                    try {
+                        response = await fetch(PROXY_API_URL, { 
+                            method: 'POST', 
+                            headers: { 'Content-Type': 'application/json' }, 
+                            body: JSON.stringify(proxyPayload) 
+                        });
+                        
+                        resultText = await response.text();
+
+                        if (response.ok) {
+                            break;
+                        }
+
+                        if (response.status === 503 || response.status === 429 || response.status >= 500) {
+                            if (attempt === maxRetries) {
+                                throw new Error(`Chat API Error: ${response.status} - ${resultText}`);
+                            }
+                            console.warn(`Chat attempt ${attempt} failed with ${response.status}. Retrying in ${delay/1000}s...`);
+                            await new Promise(resolve => setTimeout(resolve, delay));
+                            delay *= 2; 
+                        } else {
+                            throw new Error(`Chat API Error: ${response.status} - ${resultText}`);
+                        }
+                    } catch (error) {
+                        if (attempt === maxRetries) {
+                            throw error; 
+                        }
+                        console.warn(`Chat network error on attempt ${attempt}: ${error.message}. Retrying in ${delay/1000}s...`);
+                        await new Promise(resolve => setTimeout(resolve, delay));
+                        delay *= 2;
+                    }
+                }
+                
+                const result = JSON.parse(resultText);
+                const botResponse = result.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't process that.";
+                botMessageDiv.innerHTML = botResponse.replace(/\*\*(.*?)\*\*/g, '<b>$1</b>').replace(/[\*#]/g, '');
+            } catch (e) {
+                console.error("Chatbot error:", e);
+                botMessageDiv.textContent = "Sorry, an error occurred while getting your answer.";
+            }
+        }
+
+        function addChatMessage(text, sender) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `chat-message ${sender}-message`;
+            messageDiv.textContent = text;
+            chatMessages.appendChild(messageDiv);
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+            return messageDiv;
+        }
+
+        function showStatus(message) {
+            statusSection.classList.remove('hidden');
+            dashboardSection.classList.add('hidden');
+            errorSection.classList.add('hidden');
+            loader.classList.remove('hidden');
+            statusText.textContent = message;
+        }
+
+        function showError(message) {
+            statusSection.classList.add('hidden');
+            errorSection.classList.remove('hidden');
+            errorText.textContent = message;
+        }
+
+        function setupTabDragAndDrop() {
+            let draggedTab = null;
+            tabsContainer.addEventListener('dragstart', (e) => {
+                if (e.target.classList.contains('tab-btn')) {
+                    draggedTab = e.target;
+                    setTimeout(() => e.target.classList.add('dragging'), 0);
+                }
+            });
+            tabsContainer.addEventListener('dragend', (e) => {
+                if (draggedTab) {
+                    draggedTab.classList.remove('dragging');
+                    draggedTab = null;
+                }
+            });
+            tabsContainer.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                const afterElement = getDragAfterElement(tabsContainer, e.clientX);
+                if (draggedTab) {
+                    if (afterElement == null) {
+                        tabsContainer.appendChild(draggedTab);
+                    } else {
+                        tabsContainer.insertBefore(draggedTab, afterElement);
+                    }
+                }
+            });
+            function getDragAfterElement(container, x) {
+                const draggableElements = [...container.querySelectorAll('.tab-btn:not(.dragging)')];
+                return draggableElements.reduce((closest, child) => {
+                    const box = child.getBoundingClientRect();
+                    const offset = x - box.left - box.width / 2;
+                    if (offset < 0 && offset > closest.offset) {
+                        return { offset: offset, element: child };
+                    } else {
+                        return closest;
+                    }
+                }, { offset: Number.NEGATIVE_INFINITY }).element;
+            }
+            tabsContainer.addEventListener('click', (e) => {
+                if (e.target.classList.contains('tab-btn')) {
+                    tabsContainer.querySelectorAll('.tab-btn').forEach(tab => tab.classList.remove('active'));
+                    e.target.classList.add('active');
+                    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                    document.getElementById(`content-${e.target.dataset.target}`).classList.add('active');
+                }
+            });
+        }
+
+        function preventDefaults(e) { e.preventDefault(); e.stopPropagation(); }
+        function handleFiles(files) {
+            uploadedFiles = Array.from(files).filter(file => file.type === 'application/pdf');
+            updateFileList();
+            analyzeButton.disabled = uploadedFiles.length === 0;
+        }
+        function updateFileList() {
+            fileList.innerHTML = '';
+            if (uploadedFiles.length > 0) {
+                const list = document.createElement('ul');
+                list.className = 'list-disc pl-5 space-y-1';
+                uploadedFiles.forEach(file => {
+                    const listItem = document.createElement('li');
+                    listItem.textContent = `${file.name} (${(file.size / 1024).toFixed(1)} KB)`;
+                    list.appendChild(listItem);
+                });
+                fileList.appendChild(list);
+            }
+        }
+
+        // --- INITIALIZATION & SETUP ---
+
+        function setupUIHandlers() {
+            dropZone.addEventListener('click', () => fileInput.click());
+            fileInput.addEventListener('change', () => handleFiles(fileInput.files));
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(e => dropZone.addEventListener(e, preventDefaults, false));
+            ['dragenter', 'dragover'].forEach(e => dropZone.addEventListener(e, () => dropZone.classList.add('drop-zone--over'), false));
+            ['dragleave', 'drop'].forEach(e => dropZone.addEventListener(e, () => dropZone.classList.remove('drop-zone--over'), false));
+            dropZone.addEventListener('drop', (e) => handleFiles(e.dataTransfer.files), false);
+            
+            analyzeButton.addEventListener('click', processFiles);
+            addDataButton.addEventListener('click', () => uploadSection.classList.toggle('hidden'));
+            clearDataButton.addEventListener('click', clearAllData);
+            
+            setupTabDragAndDrop();
+
+            viewYtdBtn.addEventListener('click', () => setViewMode('ytd'));
+            viewAllBtn.addEventListener('click', () => setViewMode('all'));
+            viewCompareBtn.addEventListener('click', () => setViewMode('compare'));
+            
+            chatbotToggle.addEventListener('click', () => {
+                chatbotWindow.classList.toggle('hidden');
+                setTimeout(() => {
+                    chatbotWindow.classList.toggle('scale-0');
+                    chatbotWindow.classList.toggle('opacity-0');
+                }, 10);
+            });
+            chatSend.addEventListener('click', handleChatSubmit);
+            chatInput.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') handleChatSubmit();
+            });
+            
+            productSelect.addEventListener('change', () => renderProductTrendChart());
+            inventorySelect.addEventListener('change', () => renderInventoryTrendChart());
+
+            openSettingsBtn.addEventListener('click', () => {
+                inputAnnualProfit.value = targets.annualProfit;
+                inputProfitMargin.value = targets.profitMargin;
+                inputMaterialCost.value = targets.materialCostPercentage;
+                settingsModal.classList.remove('hidden');
+            });
+            closeSettingsBtn.addEventListener('click', () => settingsModal.classList.add('hidden'));
+            saveSettingsBtn.addEventListener('click', saveSettings);
+
+            commitDataBtn.addEventListener('click', commitStagedData);
+            cancelStageBtn.addEventListener('click', () => {
+                stagedAnalysisData = null;
+                stagingModal.classList.add('hidden');
+                uploadedFiles = [];
+                updateFileList();
+                uploadSection.classList.remove('hidden');
+                showStatus("Analysis discarded.");
+                setTimeout(() => statusSection.classList.add('hidden'), 2000);
+            });
+        }
+
+        async function initialize() {
+            try {
+                const firebaseConfig = JSON.parse(__firebase_config);
+                const app = initializeApp(firebaseConfig);
+                const currentAppId = typeof __app_id !== 'undefined' ? __app_id : firebaseConfig.appId;
+
+                db = getFirestore(app);
+                auth = getAuth(app);
+                storage = getStorage(app);
+                storage.maxUploadRetryTime = 300000; 
+
+                const initAuth = async () => {
+                    if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                        await signInWithCustomToken(auth, __initial_auth_token);
+                    } else {
+                        await signInAnonymously(auth);
+                    }
+                };
+                await initAuth();
+
+                onAuthStateChanged(auth, async (user) => {
+                    if (user) {
+                        statusText.textContent = 'Authenticated. Checking for saved data...';
+                        window.currentAppId = currentAppId;
+                        await loadSettings(currentAppId); 
+                        setupRealtimeListeners(currentAppId);
+                    }
+                });
+
+            } catch (e) {
+                console.error("Firebase initialization error:", e);
+                showError(`Could not initialize the application: ${e.message}`);
+            }
+        }
+
+        // Run
+        setupUIHandlers();
+        initialize();
+
     </script>
 </body>
 </html>
