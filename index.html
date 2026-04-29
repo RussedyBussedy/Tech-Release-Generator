@@ -74,6 +74,36 @@
             opacity: 0.5;
             border: 2px dashed #3b82f6 !important;
         }
+
+        /* Editable image resize in preview */
+        .resizable-image {
+            cursor: pointer;
+            transition: outline 0.1s;
+        }
+        .resizable-image.selected {
+            outline: 2px solid #3b82f6;
+            outline-offset: 2px;
+        }
+        .resize-handle {
+            position: absolute;
+            width: 12px;
+            height: 12px;
+            background: #3b82f6;
+            border: 2px solid white;
+            border-radius: 50%;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+            z-index: 10;
+            user-select: none;
+        }
+        .resize-handle.tl { top: -6px; left: -6px; cursor: nwse-resize; }
+        .resize-handle.tr { top: -6px; right: -6px; cursor: nesw-resize; }
+        .resize-handle.bl { bottom: -6px; left: -6px; cursor: nesw-resize; }
+        .resize-handle.br { bottom: -6px; right: -6px; cursor: nwse-resize; }
+        .pdf-rendering .resize-handle,
+        .pdf-rendering .resizable-image.selected {
+            display: none !important;
+            outline: none !important;
+        }
     </style>
 </head>
 <body class="bg-gray-100 text-gray-800">
@@ -361,6 +391,8 @@
         // --- INDIVIDUAL IMAGE LAYOUT METHODS ---
         window.updateImageSize = function(sectionIndex, imgIndex, sizeStr) {
             documentSections[sectionIndex].images[imgIndex].size = sizeStr;
+            // Picking a preset clears any custom width set via drag in the preview
+            delete documentSections[sectionIndex].images[imgIndex].customWidthPct;
             renderSectionsForm();
         }
 
@@ -686,26 +718,27 @@
                             `;
                         }
                     } else if (section.type === 'images' && section.images.length > 0) {
-                        
-                        // We use a highly flexible 6-column grid to allow precise sizing
-                        const gridHtml = section.images.map(img => {
-                            const sizeMap = {
-                                'small': 'col-span-2', // 2/6 = 1/3 width
-                                'medium': 'col-span-3', // 3/6 = 1/2 width
-                                'large': 'col-span-6'  // 6/6 = Full width
-                            };
-                            const spanClass = sizeMap[img.size || 'medium'];
+
+                        // Flex-wrap layout so each image can carry its own % width
+                        const sectionIdx = documentSections.indexOf(section);
+                        const presetMap = { 'small': 33, 'medium': 50, 'large': 100 };
+                        const figuresHtml = section.images.map((img, imgIdx) => {
+                            const widthPct = (typeof img.customWidthPct === 'number')
+                                ? img.customWidthPct
+                                : (presetMap[img.size || 'medium'] || 50);
+                            // Subtract a small amount so flex gap doesn't push items to a new row
+                            const flexBasis = `calc(${widthPct}% - 1rem)`;
                             // Prioritize the locally cached proxy base64 to avoid Canvas tainting issues
                             const renderSrc = img.previewSrc || img.src;
 
                             return `
-                            <div class="${spanClass} flex flex-col">
+                            <figure class="resizable-image relative flex flex-col" data-section-index="${sectionIdx}" data-img-index="${imgIdx}" style="width: ${flexBasis};">
                                 <h4 class="text-sm font-semibold text-gray-700 mb-1 break-words">${img.heading || ''}</h4>
-                                <img src="${renderSrc}" class="w-full h-auto rounded-lg shadow-sm border border-gray-200 bg-white" crossorigin="anonymous">
-                            </div>
+                                <img src="${renderSrc}" class="w-full h-auto rounded-lg shadow-sm border border-gray-200 bg-white" crossorigin="anonymous" draggable="false">
+                            </figure>
                         `}).join('');
-                        
-                        secDiv.innerHTML = `${titleHtml}<div class="mt-4 grid grid-cols-6 gap-4 items-start">${gridHtml}</div>`;
+
+                        secDiv.innerHTML = `${titleHtml}<div class="mt-4 flex flex-wrap gap-4 items-start" data-image-row="true">${figuresHtml}</div>`;
                     } else if (section.type === 'images') {
                          return; // Skip empty image galleries
                     }
@@ -728,67 +761,73 @@
         // --- MULTI-PAGE PDF GENERATOR (ATOMIC BLOCK ALGORITHM) ---
         async function getPdfBlob() {
             const { jsPDF } = window.jspdf;
-            
-            await new Promise(resolve => setTimeout(resolve, 500));
 
-            const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
-            const pdfWidth = pdf.internal.pageSize.getWidth();
-            const pdfHeight = pdf.internal.pageSize.getHeight();
-            const margin = 15; 
-            const usableWidth = pdfWidth - (margin * 2);
-            const usableHeight = pdfHeight - (margin * 2);
-            
-            let currentY = margin;
+            // Hide resize handles / selection outlines from the canvas capture
+            document.body.classList.add('pdf-rendering');
+            try {
+                await new Promise(resolve => setTimeout(resolve, 500));
 
-            const header = document.querySelector('#document-output header');
-            const sectionsContainer = document.getElementById('output-sections-container');
-            const sections = Array.from(sectionsContainer.children);
-            
-            const elementsToCapture = [header, ...sections];
+                const pdf = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+                const pdfWidth = pdf.internal.pageSize.getWidth();
+                const pdfHeight = pdf.internal.pageSize.getHeight();
+                const margin = 15;
+                const usableWidth = pdfWidth - (margin * 2);
+                const usableHeight = pdfHeight - (margin * 2);
 
-            for (let i = 0; i < elementsToCapture.length; i++) {
-                const el = elementsToCapture[i];
-                if (!el) continue;
+                let currentY = margin;
 
-                const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
-                const imgData = canvas.toDataURL('image/jpeg', 0.95);
-                
-                const imgWidthMm = usableWidth;
-                const ratio = usableWidth / canvas.width;
-                const imgHeightMm = canvas.height * ratio;
+                const header = document.querySelector('#document-output header');
+                const sectionsContainer = document.getElementById('output-sections-container');
+                const sections = Array.from(sectionsContainer.children);
 
-                if (currentY + imgHeightMm > pdfHeight - margin && currentY > margin) {
-                    pdf.addPage();
-                    currentY = margin;
-                }
+                const elementsToCapture = [header, ...sections];
 
-                if (imgHeightMm > usableHeight) {
-                    let heightLeft = imgHeightMm;
-                    let sourceY = 0;
+                for (let i = 0; i < elementsToCapture.length; i++) {
+                    const el = elementsToCapture[i];
+                    if (!el) continue;
 
-                    while (heightLeft > 0) {
-                        if (sourceY > 0) {
-                            pdf.addPage();
-                            currentY = margin;
-                        }
-                        
-                        pdf.addImage(imgData, 'JPEG', margin, currentY - sourceY, imgWidthMm, imgHeightMm);
-                        
-                        heightLeft -= usableHeight;
-                        sourceY += usableHeight;
-                        
-                        if (heightLeft <= 0) {
-                            const renderedHeightOnLastPage = imgHeightMm - (sourceY - usableHeight);
-                            currentY = margin + renderedHeightOnLastPage + 8;
-                        }
+                    const canvas = await html2canvas(el, { scale: 2, useCORS: true, backgroundColor: '#ffffff' });
+                    const imgData = canvas.toDataURL('image/jpeg', 0.95);
+
+                    const imgWidthMm = usableWidth;
+                    const ratio = usableWidth / canvas.width;
+                    const imgHeightMm = canvas.height * ratio;
+
+                    if (currentY + imgHeightMm > pdfHeight - margin && currentY > margin) {
+                        pdf.addPage();
+                        currentY = margin;
                     }
-                } else {
-                    pdf.addImage(imgData, 'JPEG', margin, currentY, imgWidthMm, imgHeightMm);
-                    currentY += imgHeightMm + 8; 
-                }
-            }
 
-            return pdf.output('blob');
+                    if (imgHeightMm > usableHeight) {
+                        let heightLeft = imgHeightMm;
+                        let sourceY = 0;
+
+                        while (heightLeft > 0) {
+                            if (sourceY > 0) {
+                                pdf.addPage();
+                                currentY = margin;
+                            }
+
+                            pdf.addImage(imgData, 'JPEG', margin, currentY - sourceY, imgWidthMm, imgHeightMm);
+
+                            heightLeft -= usableHeight;
+                            sourceY += usableHeight;
+
+                            if (heightLeft <= 0) {
+                                const renderedHeightOnLastPage = imgHeightMm - (sourceY - usableHeight);
+                                currentY = margin + renderedHeightOnLastPage + 8;
+                            }
+                        }
+                    } else {
+                        pdf.addImage(imgData, 'JPEG', margin, currentY, imgWidthMm, imgHeightMm);
+                        currentY += imgHeightMm + 8;
+                    }
+                }
+
+                return pdf.output('blob');
+            } finally {
+                document.body.classList.remove('pdf-rendering');
+            }
         }
 
         function getFormattedFileName() {
@@ -1034,6 +1073,89 @@
             if (!document.getElementById('editing-id').value) await startNewRelease(true);
             else switchView('form-view', false);
         }
+
+        // --- PREVIEW IMAGE RESIZE (drag corner handles) ---
+        (function initImageResize() {
+            const HANDLES = ['tl', 'tr', 'bl', 'br'];
+
+            function clearSelection() {
+                document.querySelectorAll('.resizable-image.selected').forEach(fig => {
+                    fig.classList.remove('selected');
+                    fig.querySelectorAll('.resize-handle').forEach(h => h.remove());
+                });
+            }
+
+            function selectFigure(fig) {
+                if (fig.classList.contains('selected')) return;
+                clearSelection();
+                fig.classList.add('selected');
+                HANDLES.forEach(pos => {
+                    const h = document.createElement('div');
+                    h.className = `resize-handle ${pos}`;
+                    h.dataset.handle = pos;
+                    fig.appendChild(h);
+                });
+            }
+
+            // Click handling on the preview container
+            document.addEventListener('click', (e) => {
+                // Ignore clicks that came from a drag-resize (handled in mouseup)
+                if (e.target.closest('.resize-handle')) return;
+                const fig = e.target.closest('.resizable-image');
+                if (fig) {
+                    selectFigure(fig);
+                } else {
+                    clearSelection();
+                }
+            });
+
+            // Mousedown on a handle starts the drag
+            document.addEventListener('mousedown', (e) => {
+                const handle = e.target.closest('.resize-handle');
+                if (!handle) return;
+                e.preventDefault();
+                e.stopPropagation();
+
+                const fig = handle.parentElement;
+                const row = fig.parentElement; // the flex-wrap container
+                const isLeftHandle = handle.dataset.handle === 'tl' || handle.dataset.handle === 'bl';
+
+                const rowRect = row.getBoundingClientRect();
+                const figRect = fig.getBoundingClientRect();
+                const startWidthPx = figRect.width;
+                const rowWidthPx = rowRect.width;
+                const startX = e.clientX;
+                const minPx = rowWidthPx * 0.10;
+                const maxPx = rowWidthPx;
+
+                let lastPct = (startWidthPx / rowWidthPx) * 100;
+
+                function onMove(ev) {
+                    const dx = ev.clientX - startX;
+                    const delta = isLeftHandle ? -dx : dx;
+                    let newPx = startWidthPx + delta;
+                    if (newPx < minPx) newPx = minPx;
+                    if (newPx > maxPx) newPx = maxPx;
+                    const pct = (newPx / rowWidthPx) * 100;
+                    lastPct = pct;
+                    fig.style.width = `calc(${pct}% - 1rem)`;
+                }
+
+                function onUp() {
+                    document.removeEventListener('mousemove', onMove);
+                    document.removeEventListener('mouseup', onUp);
+                    const si = parseInt(fig.dataset.sectionIndex, 10);
+                    const ii = parseInt(fig.dataset.imgIndex, 10);
+                    if (!Number.isNaN(si) && !Number.isNaN(ii)
+                        && documentSections[si] && documentSections[si].images[ii]) {
+                        documentSections[si].images[ii].customWidthPct = Math.round(lastPct * 10) / 10;
+                    }
+                }
+
+                document.addEventListener('mousemove', onMove);
+                document.addEventListener('mouseup', onUp);
+            });
+        })();
     </script>
 </body>
 </html>
